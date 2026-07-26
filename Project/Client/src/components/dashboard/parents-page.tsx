@@ -1,28 +1,33 @@
 import { useMemo } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { statusBadgeClass } from "@/lib/badge-styles";
+import { ENTITY_STATUS_LABEL, PARENT_RELATION_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
 import { ParentDialog } from "@/components/dashboard/parent-dialog";
-import { ImportDialog } from "@/components/dashboard/import-dialog";
+import { PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function ParentsPage() {
   const { state, actions } = useDashboard();
 
-  const filteredBase = useMemo(() => {
-    const pf = state.parentFilters;
-    const q = state.parentSearch.toLowerCase();
-    return state.parents.filter((p) => {
-      const matchesSearch =
-        state.parentSearch === "" || p.name.toLowerCase().includes(q) || p.phone.includes(state.parentSearch) || p.linkedStudent.toLowerCase().includes(q);
-      return matchesSearch && (pf.college === "all" || p.college === pf.college) && (pf.relation === "all" || p.relation === pf.relation);
-    });
-  }, [state.parents, state.parentFilters, state.parentSearch]);
+  const branchMap = useMemo(() => Object.fromEntries(state.branches.map((b) => [b.id, b.name])), [state.branches]);
+  const studentMap = useMemo(() => Object.fromEntries(state.students.map((s) => [s.id, s])), [state.students]);
 
-  const allSelected = filteredBase.length > 0 && filteredBase.every((p) => state.selectedParents.includes(p.id));
+  const branchFilterItems = useMemo(() => {
+    const m: Record<string, string> = { all: "All Colleges" };
+    state.branches.forEach((b) => (m[b.id] = b.name));
+    return m;
+  }, [state.branches]);
+
+  const relationFilterItems = useMemo(() => ({ all: "All Relations", ...PARENT_RELATION_LABEL }), []);
+  const statusFilterItems = useMemo(() => ({ all: "All Status", ...ENTITY_STATUS_LABEL }), []);
+
+  const allSelected = state.parents.length > 0 && state.parents.every((p) => state.selectedParents.includes(p.id));
 
   return (
     <div className="mx-auto max-w-400 px-8 py-7">
@@ -43,33 +48,48 @@ export function ParentsPage() {
 
       <div className="flex flex-wrap items-center gap-2.5 rounded-t-2xl border border-b-0 bg-card p-4">
         <Input
-          placeholder="Search name, phone, linked student..."
+          placeholder="Search name, phone..."
           value={state.parentSearch}
           onChange={(e) => actions.setParentSearch(e.target.value)}
           className="h-8.5 min-w-50 flex-1 text-[13px]"
         />
-        <Select value={state.parentFilters.college} onValueChange={(v) => actions.setParentFilter("college", v)}>
+        <Select value={state.parentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setParentFilter("branchId", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Colleges</SelectItem>
             {state.branches.map((b) => (
-              <SelectItem key={b.id} value={b.name}>
+              <SelectItem key={b.id} value={b.id}>
                 {b.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={state.parentFilters.relation} onValueChange={(v) => actions.setParentFilter("relation", v)}>
+        <Select value={state.parentFilters.relation} items={relationFilterItems} onValueChange={(v) => actions.setParentFilter("relation", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Relations</SelectItem>
-            <SelectItem value="Father">Father</SelectItem>
-            <SelectItem value="Mother">Mother</SelectItem>
-            <SelectItem value="Guardian">Guardian</SelectItem>
+            {Object.entries(PARENT_RELATION_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={state.parentFilters.status} items={statusFilterItems} onValueChange={(v) => actions.setParentFilter("status", v ?? "all")}>
+          <SelectTrigger className="h-8.5 text-[12.5px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            {Object.entries(ENTITY_STATUS_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -96,7 +116,7 @@ export function ParentsPage() {
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               <TableHead className="w-9">
-                <Checkbox checked={allSelected} onCheckedChange={() => actions.toggleSelectAllParents(filteredBase.map((p) => p.id))} />
+                <Checkbox checked={allSelected} onCheckedChange={() => actions.toggleSelectAllParents(state.parents.map((p) => p.id))} />
               </TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Name</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Phone</TableHead>
@@ -104,43 +124,60 @@ export function ParentsPage() {
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Relation</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Linked Student</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">College</TableHead>
+              <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Status</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredBase.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  <Checkbox checked={state.selectedParents.includes(p.id)} onCheckedChange={() => actions.toggleParentSelect(p.id)} />
-                </TableCell>
-                <TableCell className="text-[13px] font-semibold">{p.name}</TableCell>
-                <TableCell className="text-[13px]">{p.phone}</TableCell>
-                <TableCell className="text-[13px]">{p.email}</TableCell>
-                <TableCell className="text-[13px]">{p.relation}</TableCell>
-                <TableCell className="text-[13px]">{p.linkedStudent}</TableCell>
-                <TableCell className="text-[13px]">{p.college}</TableCell>
-                <TableCell className="text-[12.5px] whitespace-nowrap">
-                  <span onClick={() => actions.openEditParent(p)} className="mr-3 cursor-pointer font-semibold">
-                    Edit
-                  </span>
-                  <span onClick={() => actions.deleteParent(p.id)} className="cursor-pointer font-semibold text-destructive">
-                    Delete
-                  </span>
+            {state.parentsLoading && (
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center text-[13px] text-muted-foreground">
+                  Loading parents…
                 </TableCell>
               </TableRow>
-            ))}
+            )}
+            {!state.parentsLoading && state.parents.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center text-[13px] text-muted-foreground">
+                  No parents found.
+                </TableCell>
+              </TableRow>
+            )}
+            {!state.parentsLoading &&
+              state.parents.map((p) => {
+                const student = studentMap[p.linkedStudentId];
+                return (
+                  <TableRow key={p.id}>
+                    <TableCell>
+                      <Checkbox checked={state.selectedParents.includes(p.id)} onCheckedChange={() => actions.toggleParentSelect(p.id)} />
+                    </TableCell>
+                    <TableCell className="text-[13px] font-semibold">{p.name}</TableCell>
+                    <TableCell className="text-[13px]">{p.phone}</TableCell>
+                    <TableCell className="text-[13px]">{p.email || "—"}</TableCell>
+                    <TableCell className="text-[13px]">{p.relation ? PARENT_RELATION_LABEL[p.relation] : "—"}</TableCell>
+                    <TableCell className="text-[13px]">{student ? `${student.name} (${student.rollNo})` : "—"}</TableCell>
+                    <TableCell className="text-[13px]">{student ? (branchMap[student.branchId] ?? "—") : "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={statusBadgeClass(ENTITY_STATUS_LABEL[p.status])}>
+                        {ENTITY_STATUS_LABEL[p.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="flex flex-row items-center justify-end gap-5 mr-3">
+                      <span onClick={() => actions.openEditParent(p)} className="cursor-pointer">
+                        <PencilIcon size={16} />
+                      </span>
+                      <span onClick={() => actions.deleteParent(p.id)} className="cursor-pointer text-destructive">
+                        <TrashIcon size={16} />
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
           </TableBody>
         </Table>
       </div>
 
       <ParentDialog />
-      <ImportDialog
-        open={state.showImportParents}
-        title="Import Parents from Excel"
-        confirmLabel="Import Parents"
-        onClose={actions.closeImportParents}
-        onConfirm={actions.importParents}
-      />
     </div>
   );
 }

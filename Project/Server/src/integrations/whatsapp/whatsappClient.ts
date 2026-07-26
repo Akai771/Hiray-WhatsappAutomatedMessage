@@ -33,6 +33,10 @@ export async function sendTemplateMessage({
   languageCode = "en_US",
   components,
 }: SendTemplateMessageInput): Promise<SendTemplateMessageResult> {
+  if (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID) {
+    throw ApiError.internal("WhatsApp integration is not configured (WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID unset)");
+  }
+
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
   const response = await fetch(url, {

@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { XIcon } from "@phosphor-icons/react";
-
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { NOTIF_TYPE_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
 import type { SettingsTab } from "@/lib/types";
 
@@ -13,7 +14,7 @@ const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
   { key: "branches", label: "Branches" },
   { key: "courses", label: "Courses" },
   { key: "years", label: "Years & Semesters" },
-  { key: "divisions", label: "Divisions" },
+  { key: "templates", label: "Message Templates" },
 ];
 
 export function SettingsPage() {
@@ -23,7 +24,7 @@ export function SettingsPage() {
     <div className="mx-auto max-w-400 px-8 py-7">
       <div className="mb-5">
         <div className="text-[22px] font-extrabold">Settings</div>
-        <div className="mt-0.5 text-[13px] text-muted-foreground">Configure college branches, courses, years and divisions.</div>
+        <div className="mt-0.5 text-[13px] text-muted-foreground">Configure college branches, courses, and years.</div>
       </div>
 
       <div className="mb-5 flex gap-2 border-b">
@@ -47,7 +48,7 @@ export function SettingsPage() {
       {state.settingsTab === "branches" && <BranchesTab />}
       {state.settingsTab === "courses" && <CoursesTab />}
       {state.settingsTab === "years" && <YearsTab />}
-      {state.settingsTab === "divisions" && <DivisionsTab />}
+      {state.settingsTab === "templates" && <TemplatesTab />}
     </div>
   );
 }
@@ -58,6 +59,10 @@ function BranchesTab() {
     <div className="rounded-2xl border bg-card p-6">
       <div className="mb-4 text-[15px] font-bold">College Branches</div>
       <div className="mb-5 flex flex-col gap-2">
+        {state.branchesLoading && <div className="text-[13px] text-muted-foreground">Loading branches…</div>}
+        {!state.branchesLoading && state.branches.length === 0 && (
+          <div className="text-[13px] text-muted-foreground">No branches yet — add one below.</div>
+        )}
         {state.branches.map((b) => (
           <div key={b.id} className="flex items-center justify-between rounded-[9px] border px-3.5 py-3">
             <div>
@@ -138,10 +143,17 @@ function CoursesTab() {
         })}
       </div>
       <div className="mb-5 flex flex-col gap-2">
+        {state.coursesLoading && <div className="text-[13px] text-muted-foreground">Loading courses…</div>}
+        {!state.coursesLoading && coursesForBranch.length === 0 && (
+          <div className="text-[13px] text-muted-foreground">No courses for this branch yet.</div>
+        )}
         {coursesForBranch.map((c) => (
           <div key={c.id} className="flex items-center justify-between rounded-[9px] border px-3.5 py-3">
             <div className="text-[13.5px] font-bold">
-              {c.name} <span className="font-medium text-muted-foreground">({c.code}) · {c.totalYears} yrs</span>
+              {c.name}{" "}
+              <span className="font-medium text-muted-foreground">
+                ({c.code}) · {c.totalYears} yrs · {c.semestersPerYear} sem/yr
+              </span>
             </div>
             <span onClick={() => actions.deleteCourse(c.id)} className="cursor-pointer text-[12.5px] font-semibold text-destructive">
               Delete
@@ -149,7 +161,7 @@ function CoursesTab() {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-[1.4fr_1fr_1fr_auto] items-end gap-2.5">
+      <div className="grid grid-cols-[1.2fr_0.8fr_0.7fr_0.9fr_auto] items-end gap-2.5">
         <div>
           <Label className="mb-1 text-xs font-semibold text-muted-foreground">Course Name</Label>
           <Input
@@ -176,6 +188,17 @@ function CoursesTab() {
             max={6}
             value={state.newCourse.totalYears}
             onChange={(e) => actions.setNewCourseField("totalYears", e.target.value)}
+            className="h-9 text-[13px]"
+          />
+        </div>
+        <div>
+          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Sem / Year</Label>
+          <Input
+            type="number"
+            min={1}
+            max={4}
+            value={state.newCourse.semestersPerYear}
+            onChange={(e) => actions.setNewCourseField("semestersPerYear", e.target.value)}
             className="h-9 text-[13px]"
           />
         </div>
@@ -240,35 +263,106 @@ function YearsTab() {
   );
 }
 
-function DivisionsTab() {
+function TemplatesTab() {
   const { state, actions } = useDashboard();
+  const canManage = state.role === "super_admin";
+
   return (
     <div className="rounded-2xl border bg-card p-6">
-      <div className="mb-4 text-[15px] font-bold">Divisions / Sections</div>
-      <div className="mb-5 flex flex-wrap gap-2.5">
-        {state.divisions.map((d) => (
-          <div
-            key={d}
-            className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3.5 py-2 text-[13px] font-bold"
-          >
-            Division {d}
-            <span onClick={() => actions.deleteDivision(d)} className="cursor-pointer font-extrabold text-destructive">
-              <XIcon className="size-3" />
-            </span>
+      <div className="mb-4 text-[15px] font-bold">WhatsApp Message Templates</div>
+      <div className="mb-2 text-[12px] text-muted-foreground">
+        Each entry must match a template already approved in WhatsApp Business Manager — the WhatsApp Template Name is looked up at send time.
+      </div>
+      <div className="mb-5 flex flex-col gap-2">
+        {state.templatesLoading && <div className="text-[13px] text-muted-foreground">Loading templates…</div>}
+        {!state.templatesLoading && state.templates.length === 0 && (
+          <div className="text-[13px] text-muted-foreground">No templates yet — add one below.</div>
+        )}
+        {state.templates.map((t) => (
+          <div key={t.id} className="flex items-center justify-between rounded-[9px] border px-3.5 py-3">
+            <div>
+              <div className="text-[13.5px] font-bold">
+                {t.name} <span className="font-medium text-muted-foreground">({t.whatsappTemplateName})</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {NOTIF_TYPE_LABEL[t.category]}
+                {t.attachmentAllowed ? " · attachment allowed" : ""}
+                {t.buttonAllowed ? " · button allowed" : ""}
+                {t.variables.length ? ` · variables: ${t.variables.join(", ")}` : ""}
+              </div>
+            </div>
+            {canManage && (
+              <span onClick={() => actions.deleteTemplate(t.id)} className="cursor-pointer text-[12.5px] font-semibold text-destructive">
+                Delete
+              </span>
+            )}
           </div>
         ))}
       </div>
-      <div className="flex max-w-[320px] gap-2.5">
-        <Input
-          placeholder="e.g. E"
-          value={state.newDivision}
-          onChange={(e) => actions.setNewDivision(e.target.value)}
-          className="h-9 flex-1 text-[13px] uppercase"
-        />
-        <Button onClick={actions.addDivision} className="h-9 rounded-lg px-4.5 text-[13px] font-bold">
-          Add
-        </Button>
-      </div>
+      {canManage && (
+        <div className="grid grid-cols-2 gap-2.5">
+          <div>
+            <Label className="mb-1 text-xs font-semibold text-muted-foreground">Display Name</Label>
+            <Input
+              placeholder="e.g. Exam Schedule Notice"
+              value={state.newTemplate.name}
+              onChange={(e) => actions.setNewTemplateField("name", e.target.value)}
+              className="h-9 text-[13px]"
+            />
+          </div>
+          <div>
+            <Label className="mb-1 text-xs font-semibold text-muted-foreground">WhatsApp Template Name</Label>
+            <Input
+              placeholder="exam_schedule_notice"
+              value={state.newTemplate.whatsappTemplateName}
+              onChange={(e) => actions.setNewTemplateField("whatsappTemplateName", e.target.value)}
+              className="h-9 text-[13px]"
+            />
+          </div>
+          <div>
+            <Label className="mb-1 text-xs font-semibold text-muted-foreground">Category</Label>
+            <Select
+              value={state.newTemplate.category}
+              items={NOTIF_TYPE_LABEL}
+              onValueChange={(v) => actions.setNewTemplateField("category", (v ?? "UTILITY") as typeof state.newTemplate.category)}
+            >
+              <SelectTrigger className="h-9 w-full text-[13px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(NOTIF_TYPE_LABEL).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="mb-1 text-xs font-semibold text-muted-foreground">Variables (comma-separated)</Label>
+            <Input
+              placeholder="studentName, examDate"
+              value={state.newTemplate.variablesText}
+              onChange={(e) => actions.setNewTemplateField("variablesText", e.target.value)}
+              className="h-9 text-[13px]"
+            />
+          </div>
+          <label className="flex cursor-pointer items-center gap-2">
+            <Checkbox
+              checked={state.newTemplate.attachmentAllowed}
+              onCheckedChange={(v) => actions.setNewTemplateField("attachmentAllowed", !!v)}
+            />
+            <span className="text-[12.5px] font-semibold">Allows attachment</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2">
+            <Checkbox checked={state.newTemplate.buttonAllowed} onCheckedChange={(v) => actions.setNewTemplateField("buttonAllowed", !!v)} />
+            <span className="text-[12.5px] font-semibold">Allows CTA button</span>
+          </label>
+          <Button onClick={actions.addTemplate} className="col-span-2 h-9 rounded-lg text-[13px] font-bold">
+            Add Template
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

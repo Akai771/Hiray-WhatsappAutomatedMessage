@@ -6,6 +6,8 @@ export type ApiRole = "SUPER_ADMIN" | "FACULTY";
 export type EntityStatus = "ACTIVE" | "INACTIVE";
 export type TemplateCategory = "UTILITY" | "MARKETING";
 export type RecipientType = "STUDENT" | "PARENT";
+export type StudentStatus = "ACTIVE" | "GRADUATED" | "DROPPED";
+export type ParentRelation = "FATHER" | "MOTHER" | "GUARDIAN";
 export type NotificationStatus =
   | "DRAFT"
   | "SCHEDULED"
@@ -38,6 +40,7 @@ export interface PaginatedEnvelope<T> {
 
 export interface AuthUser {
   id: string;
+  name: string;
   email: string;
   role: ApiRole;
   branchId: string | null;
@@ -154,6 +157,35 @@ export interface DashboardStats {
   deliveredMessages: number;
   failedMessages: number;
   pendingMessages: number;
+}
+
+export interface ApiStudent {
+  id: string;
+  rollNo: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  branchId: string;
+  courseId: string;
+  year: number;
+  semester: number;
+  division: string | null;
+  gender: string | null;
+  status: StudentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiParent {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  relation: ParentRelation | null;
+  linkedStudentId: string;
+  status: EntityStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UploadResult {

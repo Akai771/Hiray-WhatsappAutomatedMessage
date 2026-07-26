@@ -1,21 +1,32 @@
-import type { FacultyMember, MessageForm, Student } from "@/lib/types";
+import type { MessageForm } from "@/lib/types";
+import type { ApiParent, ApiStudent } from "@/services";
 
 interface RecipientPools {
-  students: Student[];
-  faculty: FacultyMember[];
+  students: ApiStudent[];
+  parents: ApiParent[];
 }
 
-export function computeRecipientCount(pools: RecipientPools, f: MessageForm) {
-  const students = pools.students.filter(
+export interface RecipientCount {
+  students: number;
+  parents: number;
+  total: number;
+}
+
+export function computeRecipientCount(pools: RecipientPools, f: MessageForm): RecipientCount {
+  const yearNum = f.year === "all" ? undefined : Number(f.year);
+  const semesterNum = f.semester === "all" ? undefined : Number(f.semester);
+
+  const matchedStudents = pools.students.filter(
     (s) =>
-      (f.college === "all" || s.college === f.college) &&
-      (f.course === "all" || s.course === f.course) &&
-      (f.year === "all" || s.year === f.year) &&
-      (f.division === "all" || s.division === f.division),
+      (f.branchId === "all" || s.branchId === f.branchId) &&
+      (f.courseId === "all" || s.courseId === f.courseId) &&
+      (yearNum === undefined || s.year === yearNum) &&
+      (semesterNum === undefined || s.semester === semesterNum),
   );
-  let count = 0;
-  if (f.audience.students) count += students.length;
-  if (f.audience.parents) count += students.length;
-  if (f.audience.staff) count += pools.faculty.length;
-  return count;
+  const matchedStudentIds = new Set(matchedStudents.map((s) => s.id));
+  const matchedParents = pools.parents.filter((p) => matchedStudentIds.has(p.linkedStudentId));
+
+  const students = f.audience.students ? matchedStudents.length : 0;
+  const parents = f.audience.parents ? matchedParents.length : 0;
+  return { students, parents, total: students + parents };
 }

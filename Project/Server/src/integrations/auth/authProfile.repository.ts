@@ -5,6 +5,7 @@ import { ApiError } from "../../shared/errors";
 
 interface FacultyRow {
   id: string;
+  name: string;
   email: string;
   role: "SUPER_ADMIN" | "FACULTY";
   branch_id: string | null;
@@ -16,7 +17,7 @@ interface FacultyRow {
 export async function getAuthProfile(userId: string): Promise<AuthUser> {
   const { data, error } = await supabaseAdmin
     .from("faculty")
-    .select("id, email, role, branch_id, status")
+    .select("id, name, email, role, branch_id, status")
     .eq("id", userId)
     .single<FacultyRow>();
 
@@ -30,6 +31,7 @@ export async function getAuthProfile(userId: string): Promise<AuthUser> {
 
   return {
     id: data.id,
+    name: data.name,
     email: data.email,
     role: data.role,
     branchId: data.branch_id,

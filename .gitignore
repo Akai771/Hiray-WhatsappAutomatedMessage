@@ -29,3 +29,6 @@ Client/package.json
 Project/Server/server.md
 Project/Server/claude.md
 Project/.mcp.json
+/Project/Server/supabase/migrations
+Project/Server/scripts/bootstrap-super-admin.ts
+Project/Server/scripts/bootstrap-super-admin.ts

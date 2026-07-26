@@ -21,6 +21,7 @@ export interface CreateFacultyInput {
 export interface UpdateFacultyInput {
   name?: string;
   branchId?: string;
+  role?: Role;
 }
 
 export interface ListFacultyFilter {

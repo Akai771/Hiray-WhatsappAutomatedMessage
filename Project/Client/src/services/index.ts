@@ -8,3 +8,5 @@ export * as templateService from "./template.service";
 export * as notificationService from "./notification.service";
 export * as dashboardService from "./dashboard.service";
 export * as uploadService from "./upload.service";
+export * as studentsService from "./students.service";
+export * as parentsService from "./parents.service";

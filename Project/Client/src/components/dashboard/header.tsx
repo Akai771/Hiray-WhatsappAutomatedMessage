@@ -1,9 +1,10 @@
-import { DesktopIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import { DesktopIcon, MoonIcon, SignOutIcon, SunIcon } from "@phosphor-icons/react";
 
-import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "@/store/dashboard-store";
+import { useAuth } from "@/store/auth-store";
 import type { Tab } from "@/lib/types";
 
 const THEME_ICON = { light: SunIcon, dark: MoonIcon, system: DesktopIcon };
@@ -19,7 +20,11 @@ const TABS: { key: Tab; label: string }[] = [
 export function Header() {
   const { state, actions } = useDashboard();
   const { theme, setTheme } = useTheme();
+  const { user, logout } = useAuth();
   const ThemeIcon = THEME_ICON[theme];
+
+  const initials = user?.name ? user.name.slice(0, 2).toUpperCase() : "??";
+  const roleLabel = user?.role === "SUPER_ADMIN" ? "Super Admin" : "Faculty";
 
   return (
     <div className="sticky top-0 z-40 border-b bg-card">
@@ -33,41 +38,35 @@ export function Header() {
             <div className="text-[11.5px] font-medium text-muted-foreground">WhatsApp Messaging Dashboard</div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            title={`Theme: ${theme} (click to change)`}
-            className="size-8.5 rounded-full"
-          >
-            <ThemeIcon className="size-4" />
-          </Button>
-          <div className="flex items-center rounded-full border bg-muted p-0.75">
+        <Popover>
+          <PopoverTrigger className="flex cursor-pointer items-center gap-2.5 rounded-full py-1 px-3 outline-none hover:bg-muted/60">
+            <div className="text-right leading-tight">
+              <div className="text-[12.5px] font-bold">{user?.name}</div>
+              <div className="text-[11px] font-medium text-muted-foreground">{roleLabel}</div>
+            </div>
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-[12px] font-bold text-background">
+              {initials}
+            </div>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 gap-1">
             <button
-              onClick={() => actions.setRole("super_admin")}
-              className={cn(
-                "cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors",
-                state.role === "super_admin" ? "bg-foreground text-background" : "text-muted-foreground",
-              )}
+              type="button"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[12.5px] font-medium hover:bg-muted"
             >
-              Super Admin
+              <ThemeIcon className="size-4" />
+              Theme: {theme}
             </button>
             <button
-              onClick={() => actions.setRole("faculty")}
-              className={cn(
-                "cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors",
-                state.role === "faculty" ? "bg-foreground text-background" : "text-muted-foreground",
-              )}
+              type="button"
+              onClick={() => logout()}
+              className="flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[12.5px] font-medium text-destructive hover:bg-muted"
             >
-              Faculty
+              <SignOutIcon className="size-4" />
+              Sign out
             </button>
-          </div>
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-[12px] font-bold text-background">
-            {state.role === "super_admin" ? "SA" : "FA"}
-          </div>
-        </div>
+          </PopoverContent>
+        </Popover>
       </div>
       <div className="flex gap-6.5 px-8">
         {TABS.map((t) => {

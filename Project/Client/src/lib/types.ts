@@ -1,12 +1,42 @@
 export type Role = "super_admin" | "faculty";
 
-export type StudentStatus = "Active" | "Graduated" | "Dropped";
-export type ParentRelation = "Father" | "Mother" | "Guardian";
-export type FacultyRole = "Super Admin" | "Faculty";
-export type FacultyStatus = "Active" | "Inactive";
-export type NotifType = "Utility" | "Marketing";
-export type HistoryStatus = "Sent" | "Scheduled" | "Draft" | "Failed";
-export type AttachmentType = "image" | "pdf" | "document" | "video";
+export const API_ROLE_LABEL: Record<"SUPER_ADMIN" | "FACULTY", string> = {
+  SUPER_ADMIN: "Super Admin",
+  FACULTY: "Faculty",
+};
+
+export type StudentStatus = "ACTIVE" | "GRADUATED" | "DROPPED";
+export const STUDENT_STATUS_LABEL: Record<StudentStatus, string> = {
+  ACTIVE: "Active",
+  GRADUATED: "Graduated",
+  DROPPED: "Dropped",
+};
+export type ParentRelation = "FATHER" | "MOTHER" | "GUARDIAN";
+export const PARENT_RELATION_LABEL: Record<ParentRelation, string> = {
+  FATHER: "Father",
+  MOTHER: "Mother",
+  GUARDIAN: "Guardian",
+};
+export type EntityStatus = "ACTIVE" | "INACTIVE";
+export const ENTITY_STATUS_LABEL: Record<EntityStatus, string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+};
+export type NotifType = "UTILITY" | "MARKETING";
+export const NOTIF_TYPE_LABEL: Record<NotifType, string> = {
+  UTILITY: "Utility",
+  MARKETING: "Marketing",
+};
+export type NotificationStatus = "DRAFT" | "SCHEDULED" | "QUEUED" | "PROCESSING" | "COMPLETED" | "CANCELLED" | "FAILED";
+export const NOTIFICATION_STATUS_LABEL: Record<NotificationStatus, string> = {
+  DRAFT: "Draft",
+  SCHEDULED: "Scheduled",
+  QUEUED: "Queued",
+  PROCESSING: "Processing",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+  FAILED: "Failed",
+};
 
 export interface Branch {
   id: string;
@@ -24,42 +54,6 @@ export interface Course {
   semestersPerYear: number;
 }
 
-export interface Student {
-  id: string;
-  rollNo: string;
-  name: string;
-  phone: string;
-  email: string;
-  college: string;
-  course: string;
-  year: string;
-  division: string;
-  gender: string;
-  status: StudentStatus;
-}
-
-export interface Parent {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  relation: ParentRelation | "";
-  linkedStudent: string;
-  college: string;
-  status: "Active" | "Inactive";
-}
-
-export interface FacultyMember {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: FacultyRole;
-  department: string;
-  status: FacultyStatus;
-  lastActive: string;
-}
-
 export interface HistoryRow {
   id: string;
   date: string;
@@ -67,7 +61,7 @@ export interface HistoryRow {
   type: NotifType | "—";
   audience: string;
   recipients: number;
-  status: HistoryStatus;
+  status: NotificationStatus;
   delivered: number;
   read: number;
   failed: number;
@@ -75,21 +69,23 @@ export interface HistoryRow {
 
 export interface AttachmentValue {
   name: string;
+  url: string;
+  mimeType: string;
 }
 
 export interface MessageForm {
   notifType: NotifType | "";
+  templateId: string;
   title: string;
   message: string;
-  attachments: Record<AttachmentType, AttachmentValue | null>;
+  attachment: AttachmentValue | null;
   ctaLabel: string;
   ctaUrl: string;
-  college: string;
-  course: string;
+  branchId: string;
+  courseId: string;
   year: string;
   semester: string;
-  division: string;
-  audience: { students: boolean; parents: boolean; staff: boolean };
+  audience: { students: boolean; parents: boolean };
   scheduleMode: "now" | "schedule";
   scheduleDate: string;
   scheduleTime: string;
@@ -100,9 +96,10 @@ export interface StudentForm {
   name: string;
   phone: string;
   email: string;
-  college: string;
-  course: string;
+  branchId: string;
+  courseId: string;
   year: string;
+  semester: string;
   division: string;
   gender: string;
   status: StudentStatus;
@@ -113,17 +110,17 @@ export interface ParentForm {
   phone: string;
   email: string;
   relation: ParentRelation | "";
-  linkedStudent: string;
-  college: string;
+  linkedStudentId: string;
+  status: EntityStatus;
 }
 
 export interface FacultyForm {
   name: string;
   email: string;
-  phone: string;
-  role: FacultyRole;
-  department: string;
+  password: string;
+  branchId: string;
+  role: "SUPER_ADMIN" | "FACULTY";
 }
 
 export type Tab = "messages" | "students" | "parents" | "faculty" | "settings";
-export type SettingsTab = "branches" | "courses" | "years" | "divisions";
+export type SettingsTab = "branches" | "courses" | "years" | "templates";

@@ -1,5 +1,5 @@
 import { apiGet, apiGetPaginated, apiPatch, apiPost } from "./apiClient";
-import type { ApiFaculty, EntityStatus, PaginatedEnvelope } from "./types";
+import type { ApiFaculty, ApiRole, EntityStatus, PaginatedEnvelope } from "./types";
 
 export interface CreateFacultyInput {
   name: string;
@@ -11,6 +11,7 @@ export interface CreateFacultyInput {
 export interface UpdateFacultyInput {
   name?: string;
   branchId?: string;
+  role?: ApiRole;
 }
 
 export function listFaculty(

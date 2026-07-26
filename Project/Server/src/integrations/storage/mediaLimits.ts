@@ -12,7 +12,9 @@ export const MEDIA_CATEGORIES = {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     ],
-    maxSizeBytes: 100 * 1024 * 1024,
+    // Supabase Storage project-wide bucket cap is 50MB — keep in sync with
+    // that dashboard setting, not just WhatsApp's own document limit.
+    maxSizeBytes: 50 * 1024 * 1024,
   },
   video: {
     mimeTypes: ["video/mp4", "video/3gpp"],

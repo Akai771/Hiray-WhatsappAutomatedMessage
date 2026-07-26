@@ -35,3 +35,17 @@ export const TEMPLATE_CATEGORY = {
   MARKETING: "MARKETING",
 } as const;
 export type TemplateCategory = (typeof TEMPLATE_CATEGORY)[keyof typeof TEMPLATE_CATEGORY];
+
+export const STUDENT_STATUS = {
+  ACTIVE: "ACTIVE",
+  GRADUATED: "GRADUATED",
+  DROPPED: "DROPPED",
+} as const;
+export type StudentStatus = (typeof STUDENT_STATUS)[keyof typeof STUDENT_STATUS];
+
+export const PARENT_RELATION = {
+  FATHER: "FATHER",
+  MOTHER: "MOTHER",
+  GUARDIAN: "GUARDIAN",
+} as const;
+export type ParentRelation = (typeof PARENT_RELATION)[keyof typeof PARENT_RELATION];

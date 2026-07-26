@@ -49,7 +49,7 @@ export async function findAll(
   limit: number,
   filter: ListFacultyFilter,
 ): Promise<{ items: Faculty[]; pagination: Pagination }> {
-  let query = supabaseAdmin.from(TABLE).select("*", { count: "exact" }).eq("role", ROLES.FACULTY);
+  let query = supabaseAdmin.from(TABLE).select("*", { count: "exact" });
   if (filter.branchId) query = query.eq("branch_id", filter.branchId);
   if (filter.status) query = query.eq("status", filter.status);
 
@@ -74,6 +74,7 @@ export async function update(id: string, input: UpdateFacultyInput): Promise<Fac
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.branchId !== undefined) patch.branch_id = input.branchId;
+  if (input.role !== undefined) patch.role = input.role;
 
   const { data, error } = await supabaseAdmin.from(TABLE).update(patch).eq("id", id).select().maybeSingle();
   if (error) throw ApiError.internal("Failed to update faculty", error.message);

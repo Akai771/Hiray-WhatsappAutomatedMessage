@@ -7,38 +7,63 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { statusBadgeClass } from "@/lib/badge-styles";
+import { STUDENT_STATUS_LABEL } from "@/lib/types";
+import { studentsService } from "@/services";
 import { useDashboard } from "@/store/dashboard-store";
 import { StudentDialog } from "@/components/dashboard/student-dialog";
 import { ImportDialog } from "@/components/dashboard/import-dialog";
-
-const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+import { PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function StudentsPage() {
   const { state, actions } = useDashboard();
 
-  const courseOptionsFlat = useMemo(() => Array.from(new Set(state.courses.map((c) => c.name))), [state.courses]);
+  const branchMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    state.branches.forEach((b) => (m[b.id] = b.name));
+    return m;
+  }, [state.branches]);
 
-  const filteredBase = useMemo(() => {
-    const sf = state.studentFilters;
-    return state.students.filter((st) => {
-      const q = state.studentSearch.toLowerCase();
-      const matchesSearch =
-        state.studentSearch === "" ||
-        st.name.toLowerCase().includes(q) ||
-        st.rollNo.toLowerCase().includes(q) ||
-        st.email.toLowerCase().includes(q);
-      return (
-        matchesSearch &&
-        (sf.college === "all" || st.college === sf.college) &&
-        (sf.course === "all" || st.course === sf.course) &&
-        (sf.year === "all" || st.year === sf.year) &&
-        (sf.division === "all" || st.division === sf.division) &&
-        (sf.status === "all" || st.status === sf.status)
-      );
-    });
-  }, [state.students, state.studentFilters, state.studentSearch]);
+  const courseMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    state.courses.forEach((c) => (m[c.id] = c.name));
+    return m;
+  }, [state.courses]);
 
-  const allSelected = filteredBase.length > 0 && filteredBase.every((s) => state.selectedStudents.includes(s.id));
+  const coursesForFilter = useMemo(
+    () => (state.studentFilters.branchId === "all" ? state.courses : state.courses.filter((c) => c.branchId === state.studentFilters.branchId)),
+    [state.courses, state.studentFilters.branchId],
+  );
+
+  // `items` maps are what let Select's SelectValue resolve the selected
+  // value to its display label — without it, the trigger just prints the
+  // raw value (an id, or a bare number) instead of the item's rendered text.
+  const branchFilterItems = useMemo(() => {
+    const m: Record<string, string> = { all: "All Colleges" };
+    state.branches.forEach((b) => (m[b.id] = b.name));
+    return m;
+  }, [state.branches]);
+
+  const courseFilterItems = useMemo(() => {
+    const m: Record<string, string> = { all: "All Courses" };
+    coursesForFilter.forEach((c) => (m[c.id] = c.code));
+    return m;
+  }, [coursesForFilter]);
+
+  const yearFilterItems = useMemo(() => {
+    const m: Record<string, string> = { all: "All Years" };
+    for (let y = 1; y <= 6; y++) m[String(y)] = `Year ${y}`;
+    return m;
+  }, []);
+
+  const semesterFilterItems = useMemo(() => {
+    const m: Record<string, string> = { all: "All Semesters" };
+    for (let s = 1; s <= 8; s++) m[String(s)] = `Semester ${s}`;
+    return m;
+  }, []);
+
+  const statusFilterItems = useMemo(() => ({ all: "All Status", ...STUDENT_STATUS_LABEL }), []);
+
+  const allSelected = state.students.length > 0 && state.students.every((s) => state.selectedStudents.includes(s.id));
 
   return (
     <div className="mx-auto max-w-400 px-8 py-7">
@@ -59,72 +84,74 @@ export function StudentsPage() {
 
       <div className="flex flex-wrap items-center gap-2.5 rounded-t-2xl border border-b-0 bg-card p-4">
         <Input
-          placeholder="Search name, roll no, email..."
+          placeholder="Search name, roll no..."
           value={state.studentSearch}
           onChange={(e) => actions.setStudentSearch(e.target.value)}
-          className="h-8.5 min-w-[200px] flex-1 text-[13px]"
+          className="h-8.5 min-w-50 flex-1 text-[13px]"
         />
-        <Select value={state.studentFilters.college} onValueChange={(v) => actions.setStudentFilter("college", v)}>
+        <Select value={state.studentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setStudentFilter("branchId", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Colleges</SelectItem>
             {state.branches.map((b) => (
-              <SelectItem key={b.id} value={b.name}>
+              <SelectItem key={b.id} value={b.id}>
                 {b.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={state.studentFilters.course} onValueChange={(v) => actions.setStudentFilter("course", v)}>
+        <Select value={state.studentFilters.courseId} items={courseFilterItems} onValueChange={(v) => actions.setStudentFilter("courseId", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Courses</SelectItem>
-            {courseOptionsFlat.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
+            {coursesForFilter.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.code}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={state.studentFilters.year} onValueChange={(v) => actions.setStudentFilter("year", v)}>
+        <Select value={state.studentFilters.year} items={yearFilterItems} onValueChange={(v) => actions.setStudentFilter("year", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Years</SelectItem>
-            {YEAR_OPTIONS.map((y) => (
-              <SelectItem key={y} value={y}>
-                {y}
+            {[1, 2, 3, 4, 5, 6].map((y) => (
+              <SelectItem key={y} value={String(y)}>
+                Year {y}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={state.studentFilters.division} onValueChange={(v) => actions.setStudentFilter("division", v)}>
+        <Select value={state.studentFilters.semester} items={semesterFilterItems} onValueChange={(v) => actions.setStudentFilter("semester", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Divisions</SelectItem>
-            {state.divisions.map((d) => (
-              <SelectItem key={d} value={d}>
-                Division {d}
+            <SelectItem value="all">All Semesters</SelectItem>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+              <SelectItem key={s} value={String(s)}>
+                Semester {s}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={state.studentFilters.status} onValueChange={(v) => actions.setStudentFilter("status", v)}>
+        <Select value={state.studentFilters.status} items={statusFilterItems} onValueChange={(v) => actions.setStudentFilter("status", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Graduated">Graduated</SelectItem>
-            <SelectItem value="Dropped">Dropped</SelectItem>
+            {Object.entries(STUDENT_STATUS_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -151,47 +178,64 @@ export function StudentsPage() {
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               <TableHead className="w-9">
-                <Checkbox checked={allSelected} onCheckedChange={() => actions.toggleSelectAllStudents(filteredBase.map((s) => s.id))} />
+                <Checkbox checked={allSelected} onCheckedChange={() => actions.toggleSelectAllStudents(state.students.map((s) => s.id))} />
               </TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Roll No</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Name</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Phone</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">College</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Course</TableHead>
-              <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Year</TableHead>
+              <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Year / Sem</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Div</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Status</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredBase.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell>
-                  <Checkbox checked={state.selectedStudents.includes(s.id)} onCheckedChange={() => actions.toggleStudentSelect(s.id)} />
-                </TableCell>
-                <TableCell className="text-[13px]">{s.rollNo}</TableCell>
-                <TableCell className="text-[13px] font-semibold">{s.name}</TableCell>
-                <TableCell className="text-[13px]">{s.phone}</TableCell>
-                <TableCell className="text-[13px]">{s.college}</TableCell>
-                <TableCell className="text-[13px]">{s.course}</TableCell>
-                <TableCell className="text-[13px]">{s.year}</TableCell>
-                <TableCell className="text-[13px]">{s.division}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className={statusBadgeClass(s.status)}>
-                    {s.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-[12.5px] whitespace-nowrap">
-                  <span onClick={() => actions.openEditStudent(s)} className="mr-3 cursor-pointer font-semibold">
-                    Edit
-                  </span>
-                  <span onClick={() => actions.deleteStudent(s.id)} className="cursor-pointer font-semibold text-destructive">
-                    Delete
-                  </span>
+            {state.studentsLoading && (
+              <TableRow>
+                <TableCell colSpan={10} className="py-8 text-center text-[13px] text-muted-foreground">
+                  Loading students…
                 </TableCell>
               </TableRow>
-            ))}
+            )}
+            {!state.studentsLoading && state.students.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={10} className="py-8 text-center text-[13px] text-muted-foreground">
+                  No students found.
+                </TableCell>
+              </TableRow>
+            )}
+            {!state.studentsLoading &&
+              state.students.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell>
+                    <Checkbox checked={state.selectedStudents.includes(s.id)} onCheckedChange={() => actions.toggleStudentSelect(s.id)} />
+                  </TableCell>
+                  <TableCell className="text-[13px]">{s.rollNo}</TableCell>
+                  <TableCell className="text-[13px] font-semibold">{s.name}</TableCell>
+                  <TableCell className="text-[13px]">{s.phone}</TableCell>
+                  <TableCell className="text-[13px]">{branchMap[s.branchId] ?? "—"}</TableCell>
+                  <TableCell className="text-[13px]">{courseMap[s.courseId] ?? "—"}</TableCell>
+                  <TableCell className="text-[13px]">
+                    Y{s.year} / S{s.semester}
+                  </TableCell>
+                  <TableCell className="text-[13px]">{s.division || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className={statusBadgeClass(STUDENT_STATUS_LABEL[s.status])}>
+                      {STUDENT_STATUS_LABEL[s.status]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="flex flex-row items-center justify-end gap-5 mr-3">
+                    <span onClick={() => actions.openEditStudent(s)} className="cursor-pointer">
+                      <PencilIcon size={16} />
+                    </span>
+                    <span onClick={() => actions.deleteStudent(s.id)} className="cursor-pointer text-destructive">
+                      <TrashIcon size={16} />
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </div>
@@ -201,8 +245,20 @@ export function StudentsPage() {
         open={state.showImportStudents}
         title="Import Students from Excel"
         confirmLabel="Import Students"
+        importing={state.studentsImporting}
         onClose={actions.closeImportStudents}
         onConfirm={actions.importStudents}
+        onDownloadTemplate={async () => {
+          const blob = await studentsService.downloadImportTemplate();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "students-import-template.xlsx";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }}
       />
     </div>
   );

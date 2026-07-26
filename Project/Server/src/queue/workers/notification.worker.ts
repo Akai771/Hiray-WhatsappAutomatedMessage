@@ -94,5 +94,12 @@ export function startNotificationWorker(): Worker<SendNotificationJobData> {
     logger.error(`Notification job ${job?.id} failed`, err);
   });
 
+  // Same reasoning as notificationQueue.on("error", ...) in queue.ts — the
+  // Worker has its own duplicated Redis connections whose errors surface
+  // here, not on the shared redisConnection client.
+  worker.on("error", (err: NodeJS.ErrnoException) => {
+    logger.warn(`Notification worker Redis error: ${err.code ?? err.message}`);
+  });
+
   return worker;
 }

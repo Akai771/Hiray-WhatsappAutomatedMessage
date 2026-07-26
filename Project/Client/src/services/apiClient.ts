@@ -119,6 +119,21 @@ export function apiDelete<T>(path: string): Promise<ApiEnvelope<T>> {
   return request<ApiEnvelope<T>>(path, { method: "DELETE" });
 }
 
-export function apiUpload<T>(path: string, formData: FormData): Promise<ApiEnvelope<T>> {
-  return request<ApiEnvelope<T>>(path, { method: "POST", body: formData, isFormData: true });
+export function apiUpload<T>(path: string, formData: FormData, query?: RequestOptions["query"]): Promise<ApiEnvelope<T>> {
+  return request<ApiEnvelope<T>>(path, { method: "POST", body: formData, isFormData: true, query });
+}
+
+// For endpoints that return a raw file (e.g. an .xlsx template) rather than
+// the standard { success, message, data } JSON envelope.
+export async function apiDownload(path: string, query?: RequestOptions["query"]): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(buildUrl(path, query), { method: "GET", headers });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new ApiClientError(response.status, payload?.message ?? "Download failed", payload?.data);
+  }
+  return response.blob();
 }
