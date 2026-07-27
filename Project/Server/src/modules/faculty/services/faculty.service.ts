@@ -1,5 +1,5 @@
 import * as facultyRepository from "../repositories/faculty.repository";
-import { createAuthUser, deleteAuthUser } from "../../../integrations/auth";
+import { createAuthUser, deleteAuthUser, setUserPassword } from "../../../integrations/auth";
 import { ApiError } from "../../../shared/errors";
 import { logger } from "../../../shared/logger";
 import type { CreateFacultyInput, UpdateFacultyInput } from "../types/faculty.types";
@@ -44,4 +44,20 @@ export async function setFacultyStatus(id: string, status: string) {
   const faculty = await facultyRepository.updateStatus(id, status);
   if (!faculty) throw ApiError.notFound("Faculty not found");
   return faculty;
+}
+
+export async function resetFacultyPassword(id: string, newPassword: string) {
+  const faculty = await facultyRepository.findById(id);
+  if (!faculty) throw ApiError.notFound("Faculty not found");
+  await setUserPassword(id, newPassword);
+  return faculty;
+}
+
+export async function deleteFaculty(actorId: string, id: string) {
+  if (actorId === id) throw ApiError.badRequest("You can't delete your own account");
+  const faculty = await facultyRepository.findById(id);
+  if (!faculty) throw ApiError.notFound("Faculty not found");
+
+  await facultyRepository.remove(id);
+  await deleteAuthUser(id).catch((err) => logger.error("Failed to delete auth user for removed faculty", err));
 }

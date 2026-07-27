@@ -4,6 +4,7 @@ import {
   createFacultySchema,
   updateFacultySchema,
   updateFacultyStatusSchema,
+  resetFacultyPasswordSchema,
   listFacultyQuerySchema,
 } from "../validators/faculty.validators";
 import { idParamSchema } from "../../../shared/validators";
@@ -23,3 +24,9 @@ facultyRouter.patch(
   validate({ params: idParamSchema, body: updateFacultyStatusSchema }),
   facultyController.updateStatus,
 );
+facultyRouter.patch(
+  "/:id/reset-password",
+  validate({ params: idParamSchema, body: resetFacultyPasswordSchema }),
+  facultyController.resetPassword,
+);
+facultyRouter.delete("/:id", validate({ params: idParamSchema }), facultyController.remove);

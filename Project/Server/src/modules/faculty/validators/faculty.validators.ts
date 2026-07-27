@@ -15,6 +15,10 @@ export const updateFacultySchema = z.object({
   role: z.enum([ROLES.SUPER_ADMIN, ROLES.FACULTY]).optional(),
 });
 
+export const resetFacultyPasswordSchema = z.object({
+  password: z.string().min(8),
+});
+
 export const updateFacultyStatusSchema = z.object({
   status: z.enum([ENTITY_STATUS.ACTIVE, ENTITY_STATUS.INACTIVE]),
 });

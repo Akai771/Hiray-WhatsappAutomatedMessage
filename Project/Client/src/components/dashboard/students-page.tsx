@@ -10,12 +10,15 @@ import { statusBadgeClass } from "@/lib/badge-styles";
 import { STUDENT_STATUS_LABEL } from "@/lib/types";
 import { studentsService } from "@/services";
 import { useDashboard } from "@/store/dashboard-store";
+import { useAuth } from "@/store/auth-store";
 import { StudentDialog } from "@/components/dashboard/student-dialog";
 import { ImportDialog } from "@/components/dashboard/import-dialog";
 import { PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function StudentsPage() {
   const { state, actions } = useDashboard();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
   const branchMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -89,19 +92,21 @@ export function StudentsPage() {
           onChange={(e) => actions.setStudentSearch(e.target.value)}
           className="h-8.5 min-w-50 flex-1 text-[13px]"
         />
-        <Select value={state.studentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setStudentFilter("branchId", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Colleges</SelectItem>
-            {state.branches.map((b) => (
-              <SelectItem key={b.id} value={b.id}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {isSuperAdmin && (
+          <Select value={state.studentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setStudentFilter("branchId", v ?? "all")}>
+            <SelectTrigger className="h-8.5 text-[12.5px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Colleges</SelectItem>
+              {state.branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={state.studentFilters.courseId} items={courseFilterItems} onValueChange={(v) => actions.setStudentFilter("courseId", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />

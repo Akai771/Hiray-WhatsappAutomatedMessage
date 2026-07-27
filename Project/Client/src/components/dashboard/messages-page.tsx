@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { statusBadgeClass } from "@/lib/badge-styles";
 import { computeRecipientCount } from "@/lib/recipient-count";
 import { useDashboard } from "@/store/dashboard-store";
+import { useAuth } from "@/store/auth-store";
 import { WhatsappPreview } from "@/components/dashboard/whatsapp-preview";
 import { NOTIFICATION_STATUS_LABEL, NOTIF_TYPE_LABEL } from "@/lib/types";
 
@@ -32,6 +33,8 @@ function attachmentIcon(mimeType: string) {
 
 export function MessagesPage() {
   const { state, actions } = useDashboard();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const f = state.msgForm;
   const attachmentInputRef = useRef<HTMLInputElement>(null);
 
@@ -252,30 +255,32 @@ export function MessagesPage() {
           {/* Recipients */}
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Recipients *</div>
-            <div className="mb-5 grid grid-cols-4 gap-3">
-              <div>
-                <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">College</Label>
-                <Select
-                  value={f.branchId}
-                  items={branchFilterItems}
-                  onValueChange={(v) => {
-                    actions.setMsgField("branchId", v ?? "all");
-                    actions.setMsgField("courseId", "all");
-                  }}
-                >
-                  <SelectTrigger className="h-8.5 w-full text-[12.5px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Colleges</SelectItem>
-                    {state.branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className={cn("mb-5 grid gap-3", isSuperAdmin ? "grid-cols-4" : "grid-cols-3")}>
+              {isSuperAdmin && (
+                <div>
+                  <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">College</Label>
+                  <Select
+                    value={f.branchId}
+                    items={branchFilterItems}
+                    onValueChange={(v) => {
+                      actions.setMsgField("branchId", v ?? "all");
+                      actions.setMsgField("courseId", "all");
+                    }}
+                  >
+                    <SelectTrigger className="h-8.5 w-full text-[12.5px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Colleges</SelectItem>
+                      {state.branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Course</Label>
                 <Select value={f.courseId} items={courseFilterItems} onValueChange={(v) => actions.setMsgField("courseId", v ?? "all")}>

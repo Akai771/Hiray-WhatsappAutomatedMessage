@@ -35,10 +35,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/30 px-4">
-      <Card className="w-full max-w-95 p-2">
+    <div className="flex min-h-svh items-center justify-center bg-muted/30">
+      <Card className="w-full max-w-95">
         <CardHeader>
-          <div className="mb-1 flex size-9 items-center justify-center rounded-[9px] bg-primary text-sm font-extrabold text-primary-foreground">
+          <div className="mb-1 flex size-9 items-center justify-center rounded-sm bg-primary text-sm font-extrabold text-primary-foreground">
             HC
           </div>
           <CardTitle className="text-[17px] font-extrabold">Hiray College Notification System</CardTitle>
@@ -54,7 +54,7 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@college.edu"
-                className="h-9.5 text-[13px]"
+                className="h-9.5 text-[13px] rounded-sm"
               />
             </div>
             <div>
@@ -66,7 +66,7 @@ export function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="h-9.5 pr-9 text-[13px]"
+                  className="h-9.5 pr-9 text-[13px] rounded-sm"
                 />
                 <button
                   type="button"

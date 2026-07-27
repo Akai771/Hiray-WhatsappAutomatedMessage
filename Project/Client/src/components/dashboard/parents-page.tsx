@@ -9,11 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { statusBadgeClass } from "@/lib/badge-styles";
 import { ENTITY_STATUS_LABEL, PARENT_RELATION_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
+import { useAuth } from "@/store/auth-store";
 import { ParentDialog } from "@/components/dashboard/parent-dialog";
 import { PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function ParentsPage() {
   const { state, actions } = useDashboard();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
   const branchMap = useMemo(() => Object.fromEntries(state.branches.map((b) => [b.id, b.name])), [state.branches]);
   const studentMap = useMemo(() => Object.fromEntries(state.students.map((s) => [s.id, s])), [state.students]);
@@ -53,19 +56,21 @@ export function ParentsPage() {
           onChange={(e) => actions.setParentSearch(e.target.value)}
           className="h-8.5 min-w-50 flex-1 text-[13px]"
         />
-        <Select value={state.parentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setParentFilter("branchId", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Colleges</SelectItem>
-            {state.branches.map((b) => (
-              <SelectItem key={b.id} value={b.id}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {isSuperAdmin && (
+          <Select value={state.parentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setParentFilter("branchId", v ?? "all")}>
+            <SelectTrigger className="h-8.5 text-[12.5px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Colleges</SelectItem>
+              {state.branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={state.parentFilters.relation} items={relationFilterItems} onValueChange={(v) => actions.setParentFilter("relation", v ?? "all")}>
           <SelectTrigger className="h-8.5 text-[12.5px]">
             <SelectValue />

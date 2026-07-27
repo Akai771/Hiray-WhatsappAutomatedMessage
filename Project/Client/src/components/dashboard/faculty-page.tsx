@@ -1,5 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,10 +18,22 @@ import { statusBadgeClass } from "@/lib/badge-styles";
 import { API_ROLE_LABEL, ENTITY_STATUS_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
 import { FacultyDialog } from "@/components/dashboard/faculty-dialog";
+import { PencilIcon, PowerIcon, TrashIcon } from "@phosphor-icons/react";
+import type { ApiFaculty } from "@/services";
 
 export function FacultyPage() {
   const { state, actions } = useDashboard();
   const isSuperAdmin = state.role === "super_admin";
+  const [deleteTarget, setDeleteTarget] = useState<ApiFaculty | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await actions.deleteFaculty(deleteTarget.id);
+    setDeleting(false);
+    setDeleteTarget(null);
+  }
 
   const branchMap = useMemo(() => Object.fromEntries(state.branches.map((b) => [b.id, b.name])), [state.branches]);
 
@@ -126,10 +148,13 @@ export function FacultyPage() {
                     {isSuperAdmin && (
                       <>
                         <span onClick={() => actions.openEditFaculty(fac)} className="mr-3 cursor-pointer font-semibold">
-                          Edit
+                          <PencilIcon size={16} className="inline-block" />
                         </span>
-                        <span onClick={() => actions.toggleFacultyStatus(fac)} className="cursor-pointer font-semibold text-destructive">
-                          {fac.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                        <span onClick={() => setDeleteTarget(fac)} className="mr-3 cursor-pointer font-semibold text-destructive">
+                          <TrashIcon size={16} className="inline-block" />
+                        </span>
+                        <span onClick={() => actions.toggleFacultyStatus(fac)} className={`cursor-pointer font-semibold ${fac.status === "ACTIVE" ? "text-destructive" : "text-green-500"}`}>
+                          <PowerIcon size={16} className="inline-block" />
                         </span>
                       </>
                     )}
@@ -141,6 +166,23 @@ export function FacultyPage() {
       </div>
 
       <FacultyDialog />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete faculty account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes {deleteTarget?.name}'s account and login access. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-white hover:bg-destructive/90">
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

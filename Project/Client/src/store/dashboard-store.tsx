@@ -57,8 +57,23 @@ function emptyStudentForm(): StudentForm {
 function emptyParentForm(): ParentForm {
   return { name: "", phone: "", email: "", relation: "", linkedStudentId: "", status: "ACTIVE" };
 }
+export function generatePassword(): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%*";
+  const all = upper + lower + digits + symbols;
+  const pick = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
+  const rest = Array.from({ length: 8 }, () => pick(all));
+  const chars = [pick(upper), pick(lower), pick(digits), pick(symbols), ...rest];
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
 function emptyFacultyForm(): FacultyForm {
-  return { name: "", email: "", password: "", branchId: "", role: "FACULTY" };
+  return { name: "", email: "", password: generatePassword(), branchId: "", role: "FACULTY" };
 }
 function emptyMsgForm(): MessageForm {
   return {
@@ -741,6 +756,10 @@ function useDashboardState(initialRole: Role) {
     <K extends keyof FacultyForm>(key: K, val: FacultyForm[K]) => setState((s) => ({ ...s, facultyForm: { ...s.facultyForm, [key]: val } })),
     [],
   );
+  const regenerateFacultyPassword = useCallback(
+    () => setState((s) => ({ ...s, facultyForm: { ...s.facultyForm, password: generatePassword() } })),
+    [],
+  );
   const saveFaculty = useCallback(async () => {
     const f = state.facultyForm;
     if (!f.name.trim()) {
@@ -795,6 +814,39 @@ function useDashboardState(initialRole: Role) {
       }
     },
     [state.role, refreshFaculty],
+  );
+  const resetFacultyPassword = useCallback(
+    async (id: string, newPassword: string) => {
+      if (state.role !== "super_admin") {
+        toast.error("Only Super Admins can reset faculty passwords.");
+        return false;
+      }
+      try {
+        await facultyService.resetFacultyPassword(id, newPassword);
+        toast.success("Password reset.");
+        return true;
+      } catch (err) {
+        toast.error(apiErrorMessage(err, "Failed to reset password."));
+        return false;
+      }
+    },
+    [state.role],
+  );
+  const deleteFaculty = useCallback(
+    async (id: string) => {
+      if (state.role !== "super_admin") {
+        toast.error("Only Super Admins can delete faculty.");
+        return;
+      }
+      try {
+        await facultyService.deleteFaculty(id);
+        setState((s) => ({ ...s, faculty: s.faculty.filter((x) => x.id !== id) }));
+        toast.success("Faculty account deleted.");
+      } catch (err) {
+        toast.error(apiErrorMessage(err, "Failed to delete faculty account."));
+      }
+    },
+    [state.role],
   );
 
   const refreshBranches = useCallback(async () => {
@@ -1008,8 +1060,11 @@ function useDashboardState(initialRole: Role) {
       openEditFaculty,
       closeAddFaculty,
       setFacultyFormField,
+      regenerateFacultyPassword,
       saveFaculty,
       toggleFacultyStatus,
+      resetFacultyPassword,
+      deleteFaculty,
       setSettingsTab,
       setNewBranchField,
       addBranch,
@@ -1033,7 +1088,7 @@ function useDashboardState(initialRole: Role) {
       openImportStudents, closeImportStudents, importStudents, setParentFilter, setParentSearch, toggleParentSelect,
       toggleSelectAllParents, openAddParent, openEditParent, closeAddParent, setParentFormField, saveParent, deleteParent,
       bulkDeleteParents, messageSelectedParents, openImportParents, setFacultyFilter, openAddFaculty, openEditFaculty,
-      closeAddFaculty, setFacultyFormField, saveFaculty, toggleFacultyStatus, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
+      closeAddFaculty, setFacultyFormField, regenerateFacultyPassword, saveFaculty, toggleFacultyStatus, resetFacultyPassword, deleteFaculty, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
       setSelectedBranchForCourses, setNewCourseField, addCourse, deleteCourse, updateCourseYears, updateCourseSemesters,
       setNewTemplateField, addTemplate, deleteTemplate, setHistoryFilter, setHistorySearch,
     ],

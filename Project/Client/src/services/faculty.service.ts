@@ -1,4 +1,4 @@
-import { apiGet, apiGetPaginated, apiPatch, apiPost } from "./apiClient";
+import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from "./apiClient";
 import type { ApiFaculty, ApiRole, EntityStatus, PaginatedEnvelope } from "./types";
 
 export interface CreateFacultyInput {
@@ -40,5 +40,14 @@ export async function updateFaculty(id: string, input: UpdateFacultyInput): Prom
 
 export async function setFacultyStatus(id: string, status: EntityStatus): Promise<ApiFaculty> {
   const { data } = await apiPatch<ApiFaculty>(`/faculty/${id}/status`, { status });
+  return data;
+}
+
+export async function deleteFaculty(id: string): Promise<void> {
+  await apiDelete(`/faculty/${id}`);
+}
+
+export async function resetFacultyPassword(id: string, password: string): Promise<ApiFaculty> {
+  const { data } = await apiPatch<ApiFaculty>(`/faculty/${id}/reset-password`, { password });
   return data;
 }

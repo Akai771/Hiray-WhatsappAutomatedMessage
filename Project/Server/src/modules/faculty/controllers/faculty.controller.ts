@@ -32,3 +32,13 @@ export async function updateStatus(req: Request, res: Response) {
   const faculty = await facultyService.setFacultyStatus((req.params.id as string), req.body.status);
   return sendSuccess(res, faculty, "Faculty status updated");
 }
+
+export async function resetPassword(req: Request, res: Response) {
+  const faculty = await facultyService.resetFacultyPassword((req.params.id as string), req.body.password);
+  return sendSuccess(res, faculty, "Password reset");
+}
+
+export async function remove(req: Request, res: Response) {
+  await facultyService.deleteFaculty(req.user!.id, req.params.id as string);
+  return sendSuccess(res, null, "Faculty account deleted");
+}

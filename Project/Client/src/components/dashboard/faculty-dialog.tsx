@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { API_ROLE_LABEL } from "@/lib/types";
-import { useDashboard } from "@/store/dashboard-store";
+import { generatePassword, useDashboard } from "@/store/dashboard-store";
 
 export function FacultyDialog() {
   const { state, actions } = useDashboard();
@@ -14,6 +15,25 @@ export function FacultyDialog() {
   const isEditing = !!state.editingFacultyId;
 
   const branchItems = useMemo(() => Object.fromEntries(state.branches.map((b) => [b.id, b.name])), [state.branches]);
+
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetCandidate, setResetCandidate] = useState("");
+  const [resetDone, setResetDone] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    setResetOpen(false);
+    setResetDone(false);
+    setResetting(false);
+  }, [state.editingFacultyId, state.showAddFaculty]);
+
+  async function confirmResetPassword() {
+    if (!state.editingFacultyId) return;
+    setResetting(true);
+    const ok = await actions.resetFacultyPassword(state.editingFacultyId, resetCandidate);
+    setResetting(false);
+    if (ok) setResetDone(true);
+  }
 
   return (
     <Dialog open={state.showAddFaculty} onOpenChange={(v) => !v && actions.closeAddFaculty()}>
@@ -38,13 +58,23 @@ export function FacultyDialog() {
           </div>
           {!isEditing && (
             <div>
-              <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Password * (min 8 characters)</Label>
-              <Input
-                type="password"
-                value={f.password}
-                onChange={(e) => actions.setFacultyFormField("password", e.target.value)}
-                className="h-9.5 text-[13.5px]"
-              />
+              <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Auto-generated Password</Label>
+              <div className="flex items-center gap-1.5">
+                <Input readOnly value={f.password} className="h-9.5 font-mono text-[13.5px]" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={actions.regenerateFacultyPassword}
+                  className="h-9.5 w-9.5 shrink-0"
+                  aria-label="Generate new password"
+                >
+                  <ArrowsClockwiseIcon size={15} />
+                </Button>
+              </div>
+              <p className="mt-1 text-[11.5px] text-muted-foreground">
+                Note this password down before creating — it won't be shown again. Forgot it? Hit generate for a fresh one.
+              </p>
             </div>
           )}
           <div>
@@ -81,6 +111,60 @@ export function FacultyDialog() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          {isEditing && (
+            <div>
+              <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Password</Label>
+              {!resetOpen && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setResetCandidate(generatePassword());
+                    setResetOpen(true);
+                  }}
+                  className="h-9.5 rounded-lg text-[13px] font-semibold"
+                >
+                  Reset Password
+                </Button>
+              )}
+              {resetOpen && (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <Input readOnly value={resetCandidate} className="h-9.5 font-mono text-[13.5px]" />
+                    {!resetDone && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setResetCandidate(generatePassword())}
+                        className="h-9.5 w-9.5 shrink-0"
+                        aria-label="Generate new password"
+                      >
+                        <ArrowsClockwiseIcon size={15} />
+                      </Button>
+                    )}
+                  </div>
+                  {resetDone ? (
+                    <p className="mt-1 text-[11.5px] text-muted-foreground">
+                      Password reset. Note it down now — it won't be shown again.
+                    </p>
+                  ) : (
+                    <div className="mt-1.5 flex items-center gap-2.5">
+                      <p className="text-[11.5px] text-muted-foreground">Note this down, then confirm to apply it.</p>
+                      <div className="ml-auto flex gap-1.5">
+                        <Button type="button" variant="outline" onClick={() => setResetOpen(false)} className="h-7.5 rounded-md px-2.5 text-[12px]">
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={confirmResetPassword} disabled={resetting} className="h-7.5 rounded-md px-2.5 text-[12px]">
+                          {resetting ? "Resetting…" : "Confirm Reset"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>

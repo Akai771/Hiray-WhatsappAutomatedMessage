@@ -9,12 +9,12 @@ import type { Tab } from "@/lib/types";
 
 const THEME_ICON = { light: SunIcon, dark: MoonIcon, system: DesktopIcon };
 
-const TABS: { key: Tab; label: string }[] = [
+const TABS: { key: Tab; label: string; superAdminOnly?: boolean }[] = [
   { key: "messages", label: "Messages" },
   { key: "students", label: "Students" },
   { key: "parents", label: "Parents" },
-  { key: "faculty", label: "Faculty" },
-  { key: "settings", label: "Settings" },
+  { key: "faculty", label: "Faculty", superAdminOnly: true },
+  { key: "settings", label: "Settings", superAdminOnly: true },
 ];
 
 export function Header() {
@@ -69,7 +69,7 @@ export function Header() {
         </Popover>
       </div>
       <div className="flex gap-6.5 px-8">
-        {TABS.map((t) => {
+        {TABS.filter((t) => !t.superAdminOnly || user?.role === "SUPER_ADMIN").map((t) => {
           const active = state.activeTab === t.key;
           return (
             <button
