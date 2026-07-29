@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { FileIcon, FilePdfIcon, ImageIcon, VideoIcon, XIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, FileIcon, FilePdfIcon, ImageIcon, VideoIcon, XIcon } from "@phosphor-icons/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,7 +116,7 @@ export function MessagesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-400 px-8 py-7">
+    <div className="mx-auto max-w-400 px-4 py-7 sm:px-8">
       <div className="mb-5">
         <div className="text-[22px] font-extrabold">Send Notification</div>
         <div className="mt-0.5 text-[13px] text-muted-foreground">
@@ -129,7 +129,7 @@ export function MessagesPage() {
           {/* Notification Details */}
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Notification Details</div>
-            <div className="mb-4 grid grid-cols-2 gap-3.5">
+            <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div>
                 <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Notification Type *</Label>
                 <Select
@@ -230,7 +230,7 @@ export function MessagesPage() {
           {/* CTA */}
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Call-to-Action (Optional)</div>
-            <div className="grid grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div>
                 <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Button Label</Label>
                 <Input
@@ -255,7 +255,7 @@ export function MessagesPage() {
           {/* Recipients */}
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Recipients *</div>
-            <div className={cn("mb-5 grid gap-3", isSuperAdmin ? "grid-cols-4" : "grid-cols-3")}>
+            <div className={cn("mb-5 grid grid-cols-2 gap-3", isSuperAdmin ? "sm:grid-cols-4" : "sm:grid-cols-3")}>
               {isSuperAdmin && (
                 <div>
                   <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">College</Label>
@@ -331,7 +331,7 @@ export function MessagesPage() {
               </div>
             </div>
             <Label className="mb-2 block text-[12.5px] font-semibold text-muted-foreground">Target Audience *</Label>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-[9px] border bg-muted/40 px-3.5 py-2.5">
                 <Checkbox checked={f.audience.students} onCheckedChange={() => actions.toggleAudience("students")} />
                 <span className="text-[13.5px] font-semibold">Students</span>
@@ -348,7 +348,7 @@ export function MessagesPage() {
           {/* Schedule */}
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Schedule *</div>
-            <div className="mb-3.5 flex gap-2.5">
+            <div className="mb-3.5 flex flex-wrap gap-2.5">
               <Button variant="outline" onClick={actions.saveDraft} className="h-10 rounded-lg px-5 text-[13.5px] font-semibold">
                 Save as Draft
               </Button>
@@ -408,7 +408,7 @@ export function MessagesPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="sticky top-24 flex flex-col gap-5">
+        <div className="flex flex-col gap-5 lg:sticky lg:top-24">
           <div className="flex flex-col items-center rounded-2xl border bg-card p-5.5">
             <div className="mb-3.5 self-start text-[13px] font-bold text-muted-foreground">Live Preview</div>
             <WhatsappPreview
@@ -455,24 +455,92 @@ export function MessagesPage() {
               onChange={(e) => actions.setHistorySearch(e.target.value)}
               className="h-8.5 w-44 text-[12.5px]"
             />
-            {HISTORY_FILTERS.map((lbl) => {
-              const active = state.historyFilter === lbl;
-              return (
-                <Button
-                  key={lbl}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => actions.setHistoryFilter(lbl)}
-                  className={cn("h-7.5 rounded-md px-3 text-xs font-bold", active && "border-primary bg-primary text-primary-foreground")}
-                >
-                  {lbl}
-                </Button>
-              );
-            })}
+            <Select
+              value={state.historyFilter}
+              items={Object.fromEntries(HISTORY_FILTERS.map((l) => [l, l]))}
+              onValueChange={(v) => actions.setHistoryFilter(v ?? "All")}
+            >
+              <SelectTrigger className="h-8.5 w-36 text-[12.5px] sm:hidden">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {HISTORY_FILTERS.map((lbl) => (
+                  <SelectItem key={lbl} value={lbl}>
+                    {lbl}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="hidden flex-wrap items-center gap-2 sm:flex">
+              {HISTORY_FILTERS.map((lbl) => {
+                const active = state.historyFilter === lbl;
+                return (
+                  <Button
+                    key={lbl}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => actions.setHistoryFilter(lbl)}
+                    className={cn("h-7.5 rounded-md px-3 text-xs font-bold", active && "border-primary bg-primary text-primary-foreground")}
+                  >
+                    {lbl}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </div>
         <div className="overflow-hidden rounded-2xl border bg-card">
+          {/* Mobile: dropdown rows */}
+          <div className="divide-y sm:hidden">
+            {state.historyLoading && (
+              <div className="py-8 text-center text-[13px] text-muted-foreground">Loading message history…</div>
+            )}
+            {!state.historyLoading && historyView.length === 0 && (
+              <div className="py-8 text-center text-[13px] text-muted-foreground">No notifications yet.</div>
+            )}
+            {!state.historyLoading &&
+              historyView.map((h) => (
+                <details key={h.id} className="group px-4 py-3">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-semibold">{h.title}</div>
+                      <div className="text-[11.5px] text-muted-foreground">{h.date}</div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant="secondary" className={statusBadgeClass(NOTIFICATION_STATUS_LABEL[h.status])}>
+                        {NOTIFICATION_STATUS_LABEL[h.status]}
+                      </Badge>
+                      <CaretDownIcon className="size-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
+                    </div>
+                  </summary>
+                  <div className="mt-3 flex flex-col gap-1.5 text-[12.5px]">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Type</span>
+                      <Badge variant="secondary" className={statusBadgeClass(h.type === "—" ? "—" : NOTIF_TYPE_LABEL[h.type])}>
+                        {h.type === "—" ? "—" : NOTIF_TYPE_LABEL[h.type]}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Audience</span>
+                      <span className="font-semibold">{h.audience}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Recipients</span>
+                      <span className="font-semibold">{h.recipients.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivered / Read / Failed</span>
+                      <span className="font-semibold">
+                        {h.delivered} / {h.read} / {h.failed}
+                      </span>
+                    </div>
+                  </div>
+                </details>
+              ))}
+          </div>
+          {/* Desktop/tablet: table */}
+          <div className="hidden overflow-x-auto sm:block">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -524,6 +592,7 @@ export function MessagesPage() {
                 ))}
             </TableBody>
           </Table>
+          </div>
         </div>
       </div>
 

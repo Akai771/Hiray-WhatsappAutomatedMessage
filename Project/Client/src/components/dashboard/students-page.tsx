@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { statusBadgeClass } from "@/lib/badge-styles";
 import { STUDENT_STATUS_LABEL } from "@/lib/types";
 import { studentsService } from "@/services";
@@ -13,7 +15,7 @@ import { useDashboard } from "@/store/dashboard-store";
 import { useAuth } from "@/store/auth-store";
 import { StudentDialog } from "@/components/dashboard/student-dialog";
 import { ImportDialog } from "@/components/dashboard/import-dialog";
-import { PencilIcon, TrashIcon } from "@phosphor-icons/react";
+import { FunnelIcon, PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function StudentsPage() {
   const { state, actions } = useDashboard();
@@ -68,8 +70,82 @@ export function StudentsPage() {
 
   const allSelected = state.students.length > 0 && state.students.every((s) => state.selectedStudents.includes(s.id));
 
+  function renderFilterFields(triggerWidthClass: string) {
+    return (
+      <>
+        {isSuperAdmin && (
+          <Select value={state.studentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setStudentFilter("branchId", v ?? "all")}>
+            <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Colleges</SelectItem>
+              {state.branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={state.studentFilters.courseId} items={courseFilterItems} onValueChange={(v) => actions.setStudentFilter("courseId", v ?? "all")}>
+          <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Courses</SelectItem>
+            {coursesForFilter.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.code}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={state.studentFilters.year} items={yearFilterItems} onValueChange={(v) => actions.setStudentFilter("year", v ?? "all")}>
+          <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Years</SelectItem>
+            {[1, 2, 3, 4, 5, 6].map((y) => (
+              <SelectItem key={y} value={String(y)}>
+                Year {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={state.studentFilters.semester} items={semesterFilterItems} onValueChange={(v) => actions.setStudentFilter("semester", v ?? "all")}>
+          <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Semesters</SelectItem>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+              <SelectItem key={s} value={String(s)}>
+                Semester {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={state.studentFilters.status} items={statusFilterItems} onValueChange={(v) => actions.setStudentFilter("status", v ?? "all")}>
+          <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            {Object.entries(STUDENT_STATUS_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-400 px-8 py-7">
+    <div className="mx-auto max-w-400 px-4 py-7 sm:px-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-[22px] font-extrabold">Students</div>
@@ -92,73 +168,22 @@ export function StudentsPage() {
           onChange={(e) => actions.setStudentSearch(e.target.value)}
           className="h-8.5 min-w-50 flex-1 text-[13px]"
         />
-        {isSuperAdmin && (
-          <Select value={state.studentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setStudentFilter("branchId", v ?? "all")}>
-            <SelectTrigger className="h-8.5 text-[12.5px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Colleges</SelectItem>
-              {state.branches.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Select value={state.studentFilters.courseId} items={courseFilterItems} onValueChange={(v) => actions.setStudentFilter("courseId", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Courses</SelectItem>
-            {coursesForFilter.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.code}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={state.studentFilters.year} items={yearFilterItems} onValueChange={(v) => actions.setStudentFilter("year", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Years</SelectItem>
-            {[1, 2, 3, 4, 5, 6].map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                Year {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={state.studentFilters.semester} items={semesterFilterItems} onValueChange={(v) => actions.setStudentFilter("semester", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Semesters</SelectItem>
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-              <SelectItem key={s} value={String(s)}>
-                Semester {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={state.studentFilters.status} items={statusFilterItems} onValueChange={(v) => actions.setStudentFilter("status", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            {Object.entries(STUDENT_STATUS_LABEL).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Sheet>
+          <SheetTrigger
+            render={<Button variant="outline" className="h-8.5 shrink-0 gap-1.5 rounded-md px-3 text-[12.5px] font-semibold sm:hidden" />}
+          >
+            <FunnelIcon className="size-3.5" />
+            Filters
+          </SheetTrigger>
+          <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Filter Students</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col gap-2.5">{renderFilterFields("w-full")}</div>
+            <SheetClose render={<Button className="mt-2 h-9.5 w-full rounded-lg text-[13.5px] font-bold" />}>Apply Filters</SheetClose>
+          </SheetContent>
+        </Sheet>
+        <div className="hidden sm:contents">{renderFilterFields("w-fit")}</div>
       </div>
 
       {state.selectedStudents.length > 0 && (
@@ -179,6 +204,7 @@ export function StudentsPage() {
       )}
 
       <div className="overflow-hidden rounded-b-2xl border bg-card">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -243,6 +269,7 @@ export function StudentsPage() {
               ))}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <StudentDialog />

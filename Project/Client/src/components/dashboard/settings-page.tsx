@@ -21,13 +21,13 @@ export function SettingsPage() {
   const { state, actions } = useDashboard();
 
   return (
-    <div className="mx-auto max-w-400 px-8 py-7">
+    <div className="mx-auto max-w-400 px-4 py-7 sm:px-8">
       <div className="mb-5">
         <div className="text-[22px] font-extrabold">Settings</div>
         <div className="mt-0.5 text-[13px] text-muted-foreground">Configure college branches, courses, and years.</div>
       </div>
 
-      <div className="mb-5 flex gap-2 border-b">
+      <div className="mb-5 flex gap-2 overflow-x-auto border-b">
         {SETTINGS_TABS.map((t) => {
           const active = state.settingsTab === t.key;
           return (
@@ -35,7 +35,7 @@ export function SettingsPage() {
               key={t.key}
               onClick={() => actions.setSettingsTab(t.key)}
               className={cn(
-                "cursor-pointer rounded-t-lg px-4 py-2.5 text-[13px] font-semibold",
+                "shrink-0 cursor-pointer rounded-t-lg px-4 py-2.5 text-[13px] font-semibold whitespace-nowrap",
                 active ? "bg-primary/10 font-bold text-primary" : "text-muted-foreground",
               )}
             >
@@ -56,7 +56,7 @@ export function SettingsPage() {
 function BranchesTab() {
   const { state, actions } = useDashboard();
   return (
-    <div className="rounded-2xl border bg-card p-6">
+    <div className="rounded-2xl border bg-card p-4 sm:p-6">
       <div className="mb-4 text-[15px] font-bold">College Branches</div>
       <div className="mb-5 flex flex-col gap-2">
         {state.branchesLoading && <div className="text-[13px] text-muted-foreground">Loading branches…</div>}
@@ -64,20 +64,20 @@ function BranchesTab() {
           <div className="text-[13px] text-muted-foreground">No branches yet — add one below.</div>
         )}
         {state.branches.map((b) => (
-          <div key={b.id} className="flex items-center justify-between rounded-[9px] border px-3.5 py-3">
-            <div>
-              <div className="text-[13.5px] font-bold">
+          <div key={b.id} className="flex items-center justify-between gap-2 rounded-[9px] border px-3.5 py-3">
+            <div className="min-w-0">
+              <div className="truncate text-[13.5px] font-bold">
                 {b.name} <span className="font-medium text-muted-foreground">({b.code})</span>
               </div>
-              <div className="text-xs text-muted-foreground">{b.address}</div>
+              <div className="truncate text-xs text-muted-foreground">{b.address}</div>
             </div>
-            <span onClick={() => actions.deleteBranch(b.id)} className="cursor-pointer text-[12.5px] font-semibold text-destructive">
+            <span onClick={() => actions.deleteBranch(b.id)} className="shrink-0 cursor-pointer text-[12.5px] font-semibold text-destructive">
               Delete
             </span>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-[1fr_1fr_1.4fr_auto] items-end gap-2.5">
+      <div className="grid grid-cols-1 items-end gap-2.5 sm:grid-cols-[1fr_1fr_1.4fr_auto]">
         <div>
           <Label className="mb-1 text-xs font-semibold text-muted-foreground">Name</Label>
           <Input
@@ -105,7 +105,7 @@ function BranchesTab() {
             className="h-9 text-[13px]"
           />
         </div>
-        <Button onClick={actions.addBranch} className="h-9 rounded-lg px-4.5 text-[13px] font-bold whitespace-nowrap">
+        <Button onClick={actions.addBranch} className="h-9 w-full rounded-lg px-4.5 text-[13px] font-bold whitespace-nowrap sm:w-auto">
           Add Branch
         </Button>
       </div>
@@ -123,7 +123,7 @@ function CoursesTab() {
   );
 
   return (
-    <div className="rounded-2xl border bg-card p-6">
+    <div className="rounded-2xl border bg-card p-4 sm:p-6">
       <div className="mb-4 text-[15px] font-bold">Courses per Branch</div>
       <div className="mb-4 flex flex-wrap gap-2">
         {state.branches.map((b) => {
@@ -148,21 +148,21 @@ function CoursesTab() {
           <div className="text-[13px] text-muted-foreground">No courses for this branch yet.</div>
         )}
         {coursesForBranch.map((c) => (
-          <div key={c.id} className="flex items-center justify-between rounded-[9px] border px-3.5 py-3">
-            <div className="text-[13.5px] font-bold">
+          <div key={c.id} className="flex items-center justify-between gap-2 rounded-[9px] border px-3.5 py-3">
+            <div className="min-w-0 truncate text-[13.5px] font-bold">
               {c.name}{" "}
               <span className="font-medium text-muted-foreground">
                 ({c.code}) · {c.totalYears} yrs · {c.semestersPerYear} sem/yr
               </span>
             </div>
-            <span onClick={() => actions.deleteCourse(c.id)} className="cursor-pointer text-[12.5px] font-semibold text-destructive">
+            <span onClick={() => actions.deleteCourse(c.id)} className="shrink-0 cursor-pointer text-[12.5px] font-semibold text-destructive">
               Delete
             </span>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-[1.2fr_0.8fr_0.7fr_0.9fr_auto] items-end gap-2.5">
-        <div>
+      <div className="grid grid-cols-2 items-end gap-2.5 sm:grid-cols-[1.2fr_0.8fr_0.7fr_0.9fr_auto]">
+        <div className="col-span-2 sm:col-span-1">
           <Label className="mb-1 text-xs font-semibold text-muted-foreground">Course Name</Label>
           <Input
             placeholder="e.g. Mechanical Engineering"
@@ -202,7 +202,7 @@ function CoursesTab() {
             className="h-9 text-[13px]"
           />
         </div>
-        <Button onClick={actions.addCourse} className="h-9 rounded-lg px-4.5 text-[13px] font-bold whitespace-nowrap">
+        <Button onClick={actions.addCourse} className="col-span-2 h-9 w-full rounded-lg px-4.5 text-[13px] font-bold whitespace-nowrap sm:col-span-1 sm:w-auto">
           Add Course
         </Button>
       </div>
@@ -219,8 +219,9 @@ function YearsTab() {
   }, [state.branches]);
 
   return (
-    <div className="rounded-2xl border bg-card p-6">
+    <div className="rounded-2xl border bg-card p-4 sm:p-6">
       <div className="mb-4 text-[15px] font-bold">Years &amp; Semesters per Course</div>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -259,6 +260,7 @@ function YearsTab() {
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
@@ -268,7 +270,7 @@ function TemplatesTab() {
   const canManage = state.role === "super_admin";
 
   return (
-    <div className="rounded-2xl border bg-card p-6">
+    <div className="rounded-2xl border bg-card p-4 sm:p-6">
       <div className="mb-4 text-[15px] font-bold">WhatsApp Message Templates</div>
       <div className="mb-2 text-[12px] text-muted-foreground">
         Each entry must match a template already approved in WhatsApp Business Manager — the WhatsApp Template Name is looked up at send time.
@@ -279,12 +281,12 @@ function TemplatesTab() {
           <div className="text-[13px] text-muted-foreground">No templates yet — add one below.</div>
         )}
         {state.templates.map((t) => (
-          <div key={t.id} className="flex items-center justify-between rounded-[9px] border px-3.5 py-3">
-            <div>
-              <div className="text-[13.5px] font-bold">
+          <div key={t.id} className="flex items-center justify-between gap-2 rounded-[9px] border px-3.5 py-3">
+            <div className="min-w-0">
+              <div className="truncate text-[13.5px] font-bold">
                 {t.name} <span className="font-medium text-muted-foreground">({t.whatsappTemplateName})</span>
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="truncate text-xs text-muted-foreground">
                 {NOTIF_TYPE_LABEL[t.category]}
                 {t.attachmentAllowed ? " · attachment allowed" : ""}
                 {t.buttonAllowed ? " · button allowed" : ""}
@@ -292,7 +294,7 @@ function TemplatesTab() {
               </div>
             </div>
             {canManage && (
-              <span onClick={() => actions.deleteTemplate(t.id)} className="cursor-pointer text-[12.5px] font-semibold text-destructive">
+              <span onClick={() => actions.deleteTemplate(t.id)} className="shrink-0 cursor-pointer text-[12.5px] font-semibold text-destructive">
                 Delete
               </span>
             )}
@@ -300,7 +302,7 @@ function TemplatesTab() {
         ))}
       </div>
       {canManage && (
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           <div>
             <Label className="mb-1 text-xs font-semibold text-muted-foreground">Display Name</Label>
             <Input

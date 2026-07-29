@@ -46,7 +46,7 @@ export function StudentDialog() {
 
   return (
     <Dialog open={state.showAddStudent} onOpenChange={(v) => !v && actions.closeAddStudent()}>
-      <DialogContent className="max-h-[88vh] max-w-140 overflow-y-auto rounded-2xl p-6.5">
+      <DialogContent className="max-h-[88vh] max-w-140 overflow-y-auto rounded-2xl p-4 sm:p-6.5">
         <DialogHeader>
           <DialogTitle className="text-[17px] font-extrabold">{state.editingStudentId ? "Edit Student" : "Add Student"}</DialogTitle>
         </DialogHeader>
@@ -85,7 +85,7 @@ export function StudentDialog() {
         </div>
 
         <div className="mb-1 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Academic Placement</div>
-        <div className="mb-4 grid grid-cols-2 gap-3.5">
+        <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">College *</Label>
             <Select
@@ -195,7 +195,7 @@ export function StudentDialog() {
           )}
         </div>
 
-        <div className="mt-2 flex justify-end gap-2.5">
+        <div className="mt-2 flex flex-wrap justify-end gap-2.5">
           <Button variant="outline" onClick={actions.closeAddStudent} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Cancel
           </Button>

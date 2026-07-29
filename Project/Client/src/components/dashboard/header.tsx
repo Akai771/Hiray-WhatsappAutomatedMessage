@@ -28,19 +28,20 @@ export function Header() {
 
   return (
     <div className="sticky top-0 z-40 border-b bg-card">
-      <div className="flex items-center justify-between border-b px-8 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8.5 shrink-0 items-center justify-center rounded-[9px] bg-primary text-sm font-extrabold text-primary-foreground">
-            HC
-          </div>
-          <div>
-            <div className="text-sm font-extrabold tracking-tight leading-tight">Hiray College Notification System</div>
-            <div className="text-[11.5px] font-medium text-muted-foreground">WhatsApp Messaging Dashboard</div>
+      <div className="flex items-center justify-between gap-2 border-b px-4 py-3.5 sm:px-8">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {/* <div className="flex size-8.5 shrink-0 items-center justify-center rounded-[9px] bg-primary text-sm font-extrabold text-primary-foreground">
+            HGI
+          </div> */}
+          <img src="./HirayLogo.png" alt="Hiray Logo" className="size-10 sm:size-20 shrink-0" />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-extrabold tracking-tight leading-tight">Hiray Group of Institutes</div>
+            <div className="hidden text-[11.5px] font-medium text-muted-foreground sm:block">WhatsApp Notification System</div>
           </div>
         </div>
         <Popover>
-          <PopoverTrigger className="flex cursor-pointer items-center gap-2.5 rounded-full py-1 px-3 outline-none hover:bg-muted/60">
-            <div className="text-right leading-tight">
+          <PopoverTrigger className="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-full py-1 px-2 outline-none hover:bg-muted/60 sm:px-3">
+            <div className="hidden text-right leading-tight sm:block">
               <div className="text-[12.5px] font-bold">{user?.name}</div>
               <div className="text-[11px] font-medium text-muted-foreground">{roleLabel}</div>
             </div>
@@ -68,7 +69,7 @@ export function Header() {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex gap-6.5 px-8">
+      <div className="flex gap-4 overflow-x-auto px-4 sm:gap-6.5 sm:px-8">
         {TABS.filter((t) => !t.superAdminOnly || user?.role === "SUPER_ADMIN").map((t) => {
           const active = state.activeTab === t.key;
           return (
@@ -76,7 +77,7 @@ export function Header() {
               key={t.key}
               onClick={() => actions.setTab(t.key)}
               className={cn(
-                "cursor-pointer border-b-[3px] px-0.5 pt-3.5 pb-3 font-sans text-[13px] font-semibold tracking-wide uppercase transition-colors",
+                "shrink-0 cursor-pointer border-b-[3px] px-0.5 pt-3.5 pb-3 font-sans text-[13px] font-semibold tracking-wide whitespace-nowrap uppercase transition-colors",
                 active ? "border-primary text-foreground font-extrabold" : "border-transparent text-muted-foreground",
               )}
             >

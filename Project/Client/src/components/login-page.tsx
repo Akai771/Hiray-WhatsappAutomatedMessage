@@ -35,13 +35,13 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/30">
+    <div className="flex min-h-svh items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-95">
         <CardHeader>
           <div className="mb-1 flex size-9 items-center justify-center rounded-sm bg-primary text-sm font-extrabold text-primary-foreground">
             HC
           </div>
-          <CardTitle className="text-[17px] font-extrabold">Hiray College Notification System</CardTitle>
+          <CardTitle className="text-[17px] font-extrabold">Hiray Group of Institutes Notification System</CardTitle>
           <CardDescription>Sign in with your Faculty or Super Admin account.</CardDescription>
         </CardHeader>
         <CardContent>

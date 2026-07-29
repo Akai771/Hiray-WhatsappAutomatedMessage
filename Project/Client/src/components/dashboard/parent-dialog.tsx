@@ -42,11 +42,11 @@ export function ParentDialog() {
 
   return (
     <Dialog open={state.showAddParent} onOpenChange={(v) => !v && actions.closeAddParent()}>
-      <DialogContent className="max-h-[88vh] max-w-130 overflow-y-auto rounded-2xl p-6.5">
+      <DialogContent className="max-h-[88vh] max-w-130 overflow-y-auto rounded-2xl p-4 sm:p-6.5">
         <DialogHeader>
           <DialogTitle className="text-[17px] font-extrabold">{state.editingParentId ? "Edit Parent" : "Add Parent"}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Name *</Label>
             <Input value={f.name} onChange={(e) => actions.setParentFormField("name", e.target.value)} className="h-9.5 text-[13.5px]" />
@@ -145,7 +145,7 @@ export function ParentDialog() {
             </div>
           )}
         </div>
-        <div className="mt-2 flex justify-end gap-2.5">
+        <div className="mt-2 flex flex-wrap justify-end gap-2.5">
           <Button variant="outline" onClick={actions.closeAddParent} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Cancel
           </Button>

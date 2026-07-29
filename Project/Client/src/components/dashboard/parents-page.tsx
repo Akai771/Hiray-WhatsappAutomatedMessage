@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { statusBadgeClass } from "@/lib/badge-styles";
 import { ENTITY_STATUS_LABEL, PARENT_RELATION_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
 import { useAuth } from "@/store/auth-store";
 import { ParentDialog } from "@/components/dashboard/parent-dialog";
-import { PencilIcon, TrashIcon } from "@phosphor-icons/react";
+import { FunnelIcon, PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function ParentsPage() {
   const { state, actions } = useDashboard();
@@ -32,33 +34,12 @@ export function ParentsPage() {
 
   const allSelected = state.parents.length > 0 && state.parents.every((p) => state.selectedParents.includes(p.id));
 
-  return (
-    <div className="mx-auto max-w-400 px-8 py-7">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[22px] font-extrabold">Parents</div>
-          <div className="mt-0.5 text-[13px] text-muted-foreground">Manage parent/guardian contacts linked to students.</div>
-        </div>
-        <div className="flex gap-2.5">
-          <Button variant="outline" onClick={actions.openImportParents} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
-            Import Excel
-          </Button>
-          <Button onClick={actions.openAddParent} className="h-9.5 rounded-lg px-5 text-[13.5px] font-bold">
-            + Add Parent
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2.5 rounded-t-2xl border border-b-0 bg-card p-4">
-        <Input
-          placeholder="Search name, phone..."
-          value={state.parentSearch}
-          onChange={(e) => actions.setParentSearch(e.target.value)}
-          className="h-8.5 min-w-50 flex-1 text-[13px]"
-        />
+  function renderFilterFields(triggerWidthClass: string) {
+    return (
+      <>
         {isSuperAdmin && (
           <Select value={state.parentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setParentFilter("branchId", v ?? "all")}>
-            <SelectTrigger className="h-8.5 text-[12.5px]">
+            <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -72,7 +53,7 @@ export function ParentsPage() {
           </Select>
         )}
         <Select value={state.parentFilters.relation} items={relationFilterItems} onValueChange={(v) => actions.setParentFilter("relation", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
+          <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -85,7 +66,7 @@ export function ParentsPage() {
           </SelectContent>
         </Select>
         <Select value={state.parentFilters.status} items={statusFilterItems} onValueChange={(v) => actions.setParentFilter("status", v ?? "all")}>
-          <SelectTrigger className="h-8.5 text-[12.5px]">
+          <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -97,6 +78,47 @@ export function ParentsPage() {
             ))}
           </SelectContent>
         </Select>
+      </>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-400 px-4 py-7 sm:px-8">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-[22px] font-extrabold">Parents</div>
+          <div className="mt-0.5 text-[13px] text-muted-foreground">Manage parent/guardian contacts linked to students.</div>
+        </div>
+        <div className="flex gap-2.5">
+          <Button onClick={actions.openAddParent} className="h-9.5 rounded-lg px-5 text-[13.5px] font-bold">
+            + Add Parent
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2.5 rounded-t-2xl border border-b-0 bg-card p-4">
+        <Input
+          placeholder="Search name, phone..."
+          value={state.parentSearch}
+          onChange={(e) => actions.setParentSearch(e.target.value)}
+          className="h-8.5 min-w-50 flex-1 text-[13px]"
+        />
+        <Sheet>
+          <SheetTrigger
+            render={<Button variant="outline" className="h-8.5 shrink-0 gap-1.5 rounded-md px-3 text-[12.5px] font-semibold sm:hidden" />}
+          >
+            <FunnelIcon className="size-3.5" />
+            Filters
+          </SheetTrigger>
+          <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Filter Parents</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col gap-2.5">{renderFilterFields("w-full")}</div>
+            <SheetClose render={<Button className="mt-2 h-9.5 w-full rounded-lg text-[13.5px] font-bold" />}>Apply Filters</SheetClose>
+          </SheetContent>
+        </Sheet>
+        <div className="hidden sm:contents">{renderFilterFields("w-fit")}</div>
       </div>
 
       {state.selectedParents.length > 0 && (
@@ -117,6 +139,7 @@ export function ParentsPage() {
       )}
 
       <div className="overflow-hidden rounded-b-2xl border bg-card">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -180,6 +203,7 @@ export function ParentsPage() {
               })}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <ParentDialog />

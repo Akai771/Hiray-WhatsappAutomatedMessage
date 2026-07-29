@@ -45,7 +45,7 @@ export function FacultyPage() {
   const statusFilterItems = useMemo(() => ({ all: "All Status", ...ENTITY_STATUS_LABEL }), []);
 
   return (
-    <div className="mx-auto max-w-400 px-8 py-7">
+    <div className="mx-auto max-w-400 px-4 py-7 sm:px-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-[22px] font-extrabold">Faculty &amp; Admins</div>
@@ -64,13 +64,13 @@ export function FacultyPage() {
         </div>
       )}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2.5">
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:items-center">
         <Select
           value={state.facultyFilters.branchId}
           items={branchFilterItems}
           onValueChange={(v) => actions.setFacultyFilter("branchId", v ?? "all")}
         >
-          <SelectTrigger className="h-8.5 text-[12.5px]">
+          <SelectTrigger className="h-8.5 w-full text-[12.5px] sm:w-fit">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -87,7 +87,7 @@ export function FacultyPage() {
           items={statusFilterItems}
           onValueChange={(v) => actions.setFacultyFilter("status", v ?? "all")}
         >
-          <SelectTrigger className="h-8.5 text-[12.5px]">
+          <SelectTrigger className="h-8.5 w-full text-[12.5px] sm:w-fit">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -102,6 +102,7 @@ export function FacultyPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border bg-card">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -163,6 +164,7 @@ export function FacultyPage() {
               ))}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <FacultyDialog />

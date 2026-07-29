@@ -71,7 +71,7 @@ export function ImportDialog({ open, title, confirmLabel, importing, onClose, on
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-120 rounded-2xl p-6.5">
+      <DialogContent className="max-h-[88vh] max-w-120 overflow-y-auto rounded-2xl p-4 sm:p-6.5">
         <DialogHeader>
           <DialogTitle className="text-[17px] font-extrabold">{title}</DialogTitle>
         </DialogHeader>
@@ -93,7 +93,7 @@ export function ImportDialog({ open, title, confirmLabel, importing, onClose, on
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center text-[13px] text-muted-foreground transition-colors ${
+            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 text-center text-[13px] text-muted-foreground transition-colors sm:p-8 ${
               dragOver ? "border-primary bg-primary/5" : ""
             }`}
           >
@@ -124,7 +124,7 @@ export function ImportDialog({ open, title, confirmLabel, importing, onClose, on
           </button>
         )}
 
-        <div className="mt-1 flex justify-end gap-2.5">
+        <div className="mt-1 flex flex-wrap justify-end gap-2.5">
           <Button variant="outline" onClick={handleClose} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Cancel
           </Button>

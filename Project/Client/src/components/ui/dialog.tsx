@@ -53,12 +53,14 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          // Only max-w-[calc(100%-2rem)] here (no sm:max-w-sm) — a responsive-prefixed
-          // default class sits in a different tailwind-merge group than a consumer's
-          // plain `max-w-*` override, so it survives merging and silently wins the
-          // cascade at >=640px. Every DialogContent usage sets its own max-w-*, so
-          // this default only ever applies as the mobile ceiling.
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-xs/relaxed text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // w-[calc(100%-2rem)] (not max-w-*) for the mobile gutter — every
+          // DialogContent usage sets its own max-w-*, and tailwind-merge treats
+          // max-w-* as one group, so a max-w-based ceiling here gets silently
+          // dropped in favor of the consumer's max-w-* at every size, not just
+          // >=640px. Setting width instead keeps this immune to that collision:
+          // width supplies the 1rem-per-side gutter, and the consumer's max-w-*
+          // still caps growth on larger screens.
+          "fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-xs/relaxed text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

@@ -37,7 +37,7 @@ export function FacultyDialog() {
 
   return (
     <Dialog open={state.showAddFaculty} onOpenChange={(v) => !v && actions.closeAddFaculty()}>
-      <DialogContent className="max-w-120 rounded-2xl p-6.5">
+      <DialogContent className="max-h-[88vh] max-w-120 overflow-y-auto rounded-2xl p-4 sm:p-6.5">
         <DialogHeader>
           <DialogTitle className="text-[17px] font-extrabold">{isEditing ? "Edit Faculty" : "Add Faculty"}</DialogTitle>
         </DialogHeader>
@@ -151,7 +151,7 @@ export function FacultyDialog() {
                       Password reset. Note it down now — it won't be shown again.
                     </p>
                   ) : (
-                    <div className="mt-1.5 flex items-center gap-2.5">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
                       <p className="text-[11.5px] text-muted-foreground">Note this down, then confirm to apply it.</p>
                       <div className="ml-auto flex gap-1.5">
                         <Button type="button" variant="outline" onClick={() => setResetOpen(false)} className="h-7.5 rounded-md px-2.5 text-[12px]">
@@ -168,7 +168,7 @@ export function FacultyDialog() {
             </div>
           )}
         </div>
-        <div className="mt-2 flex justify-end gap-2.5">
+        <div className="mt-2 flex flex-wrap justify-end gap-2.5">
           <Button variant="outline" onClick={actions.closeAddFaculty} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Cancel
           </Button>
