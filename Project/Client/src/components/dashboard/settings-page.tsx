@@ -79,18 +79,18 @@ function BranchesTab() {
       </div>
       <div className="grid grid-cols-1 items-end gap-2.5 sm:grid-cols-[1fr_1fr_1.4fr_auto]">
         <div>
-          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Name</Label>
+          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Name *</Label>
           <Input
-            placeholder="e.g. East Campus"
+            placeholder="e.g. Hiray College"
             value={state.newBranch.name}
             onChange={(e) => actions.setNewBranchField("name", e.target.value)}
             className="h-9 text-[13px]"
           />
         </div>
         <div>
-          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Code</Label>
+          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Code *</Label>
           <Input
-            placeholder="EC"
+            placeholder="HC"
             value={state.newBranch.code}
             onChange={(e) => actions.setNewBranchField("code", e.target.value)}
             className="h-9 text-[13px]"
@@ -163,7 +163,7 @@ function CoursesTab() {
       </div>
       <div className="grid grid-cols-2 items-end gap-2.5 sm:grid-cols-[1.2fr_0.8fr_0.7fr_0.9fr_auto]">
         <div className="col-span-2 sm:col-span-1">
-          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Course Name</Label>
+          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Course Name *</Label>
           <Input
             placeholder="e.g. Mechanical Engineering"
             value={state.newCourse.name}
@@ -172,7 +172,7 @@ function CoursesTab() {
           />
         </div>
         <div>
-          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Code</Label>
+          <Label className="mb-1 text-xs font-semibold text-muted-foreground">Code *</Label>
           <Input
             placeholder="ME"
             value={state.newCourse.code}

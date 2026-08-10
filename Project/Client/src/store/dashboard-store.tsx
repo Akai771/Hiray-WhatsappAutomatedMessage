@@ -450,6 +450,18 @@ function useDashboardState(initialRole: Role) {
       toast.error("Roll No, Name and Phone are required.");
       return;
     }
+    if (/\d/.test(f.name.trim())) {
+      toast.error("Name cannot contain numbers.");
+      return;
+    }
+    if (!/^\d+$/.test(f.phone.trim())) {
+      toast.error("Phone number cannot contain character.");
+      return;
+    }
+    if (f.phone.trim().length != 10) {
+      toast.error("Invalid Phone number.");
+      return;
+    }
     if (!f.branchId) {
       toast.error("Select a college.");
       return;
@@ -632,8 +644,20 @@ function useDashboardState(initialRole: Role) {
 
   const saveParent = useCallback(async () => {
     const f = state.parentForm;
-    if (!f.name.trim() || !f.phone.trim()) {
-      toast.error("Name and Phone are required.");
+    if (!f.name.trim() || !f.phone.trim() || !f.relation) {
+      toast.error("Name, Phone number and Relation required.");
+      return;
+    }
+    if (/\d/.test(f.name.trim())) {
+      toast.error("Name cannot contain numbers.");
+      return;
+    }
+    if (!/^\d+$/.test(f.phone.trim())) {
+      toast.error("Phone number cannot contain character.");
+      return;
+    }
+    if (f.phone.trim().length != 10) {
+      toast.error("Invalid Phone number.");
       return;
     }
     if (!f.linkedStudentId) {
@@ -648,7 +672,7 @@ function useDashboardState(initialRole: Role) {
           name: f.name,
           phone: f.phone,
           email: f.email || undefined,
-          relation: f.relation || undefined,
+          relation: f.relation,
           linkedStudentId: f.linkedStudentId,
           status: f.status,
         });
@@ -658,7 +682,7 @@ function useDashboardState(initialRole: Role) {
           name: f.name,
           phone: f.phone,
           email: f.email || undefined,
-          relation: f.relation || undefined,
+          relation: f.relation,
           linkedStudentId: f.linkedStudentId,
         });
         toast.success("Parent added.");
@@ -766,8 +790,20 @@ function useDashboardState(initialRole: Role) {
       toast.error("Name is required.");
       return;
     }
-    if (!state.editingFacultyId && (!f.email.trim() || f.password.length < 8)) {
-      toast.error("Email is required and password must be at least 8 characters.");
+    if (/\d/.test(f.name.trim())) {
+      toast.error("Name cannot contain numbers.");
+      return;
+    }
+    if (!state.editingFacultyId && (!f.email.trim())) {
+      toast.error("Email is required.");
+      return;
+    }
+    if (!state.editingFacultyId && (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(f.email.trim()))) {
+      toast.error("Invalid Email.");
+      return;
+    }
+    if (!state.editingFacultyId && (f.password.length < 8)) {
+      toast.error("Password is required and must be at least 8 characters.");
       return;
     }
     // Faculty accounts are branch-scoped everywhere else in the app; Super

@@ -52,7 +52,7 @@ export function ParentDialog() {
             <Input value={f.name} onChange={(e) => actions.setParentFormField("name", e.target.value)} className="h-9.5 text-[13.5px]" />
           </div>
           <div>
-            <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Relation</Label>
+            <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Relation *</Label>
             <Select
               value={f.relation}
               items={PARENT_RELATION_LABEL}
@@ -72,7 +72,7 @@ export function ParentDialog() {
           </div>
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Phone *</Label>
-            <Input value={f.phone} onChange={(e) => actions.setParentFormField("phone", e.target.value)} className="h-9.5 text-[13.5px]" />
+            <Input value={f.phone} type={"number"} onChange={(e) => actions.setParentFormField("phone", e.target.value)} className="h-9.5 text-[13.5px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
           </div>
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Email</Label>

@@ -19,7 +19,7 @@ import { WhatsappPreview } from "@/components/dashboard/whatsapp-preview";
 import { NOTIFICATION_STATUS_LABEL, NOTIF_TYPE_LABEL } from "@/lib/types";
 
 const HISTORY_FILTERS = ["All", ...Object.values(NOTIFICATION_STATUS_LABEL)];
-const COLLEGE_NAME = "Greenfield College";
+const COLLEGE_NAME = "Hiray Group";
 const COLLEGE_INITIALS = "GC";
 const ATTACHMENT_ACCEPT =
   "image/jpeg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,video/mp4,video/3gpp";

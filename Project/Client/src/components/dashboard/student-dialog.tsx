@@ -63,7 +63,7 @@ export function StudentDialog() {
           </div>
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Phone *</Label>
-            <Input value={f.phone} onChange={(e) => actions.setStudentFormField("phone", e.target.value)} className="h-9.5 text-[13.5px]" />
+            <Input value={f.phone} type={"number"} onChange={(e) => actions.setStudentFormField("phone", e.target.value)} className="h-9.5 text-[13.5px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
           </div>
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Email</Label>
