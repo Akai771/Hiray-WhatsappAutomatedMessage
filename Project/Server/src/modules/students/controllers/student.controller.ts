@@ -51,7 +51,7 @@ export async function bulkRemove(req: Request, res: Response) {
 }
 
 export async function importTemplate(_req: Request, res: Response) {
-  const buffer = studentService.getImportTemplate();
+  const buffer = await studentService.getImportTemplate();
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", 'attachment; filename="students-import-template.xlsx"');
   return res.send(buffer);

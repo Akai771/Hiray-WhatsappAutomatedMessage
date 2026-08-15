@@ -54,8 +54,8 @@ export async function bulkDeleteStudents(user: AuthUser, ids: string[]) {
   return studentRepository.removeMany(ids);
 }
 
-export function getImportTemplate(): Buffer {
-  return buildImportTemplate();
+export async function getImportTemplate(): Promise<Buffer> {
+  return await buildImportTemplate();
 }
 
 export async function importStudents(user: AuthUser, fileBuffer: Buffer): Promise<ImportStudentsResult> {
@@ -66,7 +66,7 @@ export async function importStudents(user: AuthUser, fileBuffer: Buffer): Promis
   const branchByCode = new Map(branches.map((b) => [b.code.toUpperCase(), b]));
   const coursesByBranchId = new Map<string, Map<string, Course>>();
 
-  const rows = parseImportFile(fileBuffer);
+  const rows = await parseImportFile(fileBuffer);
   const result: ImportStudentsResult = { imported: 0, failed: 0, errors: [] };
 
   for (let i = 0; i < rows.length; i++) {
@@ -76,8 +76,8 @@ export async function importStudents(user: AuthUser, fileBuffer: Buffer): Promis
       const rollNo = String(raw.rollNo ?? "").trim();
       const name = String(raw.name ?? "").trim();
       const phone = String(raw.phone ?? "").trim();
-      const branchCode = String(raw.branch_id ?? "").trim().toUpperCase();
-      const courseCode = String(raw.course_id ?? "").trim().toUpperCase();
+      const branchCode = String(raw.branch_code ?? "").trim().toUpperCase();
+      const courseCode = String(raw.course_code ?? "").trim().toUpperCase();
       const year = Number(raw.year);
       const semester = Number(raw.semester);
 
