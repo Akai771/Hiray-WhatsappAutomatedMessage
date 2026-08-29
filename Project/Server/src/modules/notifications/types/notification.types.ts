@@ -3,8 +3,8 @@ import type { LogStatus, NotificationStatus, RecipientType } from "../../../shar
 export interface Notification {
   id: string;
   templateId: string;
-  title: string;
-  message: string;
+  title: string | null;
+  message: string | null;
   attachmentUrl: string | null;
   attachmentType: string | null;
   buttonLabel: string | null;
@@ -23,8 +23,12 @@ export interface Notification {
 
 export interface CreateNotificationInput {
   templateId: string;
-  title: string;
-  message: string;
+  // Title is an internal label only, never sent to WhatsApp. Message fills
+  // the template's {{1}} placeholder — required only when the chosen
+  // template actually has one; enforced in the service, not here, since
+  // that depends on which template was picked.
+  title?: string;
+  message?: string;
   attachmentUrl?: string;
   attachmentType?: string;
   buttonLabel?: string;

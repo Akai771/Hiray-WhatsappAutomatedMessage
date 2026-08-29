@@ -4,8 +4,11 @@ import { RECIPIENT_TYPE, NOTIFICATION_STATUS } from "../../../shared/constants";
 
 export const createNotificationSchema = z.object({
   templateId: z.uuid(),
-  title: z.string().min(1).max(300),
-  message: z.string().min(1),
+  // Both optional at the schema level — whether a message is actually
+  // required depends on the chosen template's variable count, checked in
+  // notification.service.ts once the template's loaded.
+  title: z.string().max(300).optional(),
+  message: z.string().max(1024).optional(),
   attachmentUrl: z.url().optional(),
   attachmentType: z.string().optional(),
   buttonLabel: z.string().max(50).optional(),

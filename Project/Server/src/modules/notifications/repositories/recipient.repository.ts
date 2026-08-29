@@ -14,10 +14,14 @@ export interface Recipient {
   recipientId: string;
   recipientType: RecipientType;
   phone: string;
+  // The recipient's own name — student's name for a STUDENT recipient, the
+  // parent's own name (not the student's) for a PARENT recipient. Used to
+  // personalize a template's {{1}} per-recipient (autoFillRecipientName).
+  name: string;
 }
 
 async function resolveStudents(filter: RecipientFilter): Promise<Recipient[]> {
-  let query = supabaseAdmin.from("students").select("id, phone").eq("status", STUDENT_STATUS.ACTIVE);
+  let query = supabaseAdmin.from("students").select("id, name, phone").eq("status", STUDENT_STATUS.ACTIVE);
   if (filter.branchId) query = query.eq("branch_id", filter.branchId);
   if (filter.courseId) query = query.eq("course_id", filter.courseId);
   if (filter.year) query = query.eq("year", filter.year);
@@ -30,6 +34,7 @@ async function resolveStudents(filter: RecipientFilter): Promise<Recipient[]> {
     recipientId: row.id,
     recipientType: RECIPIENT_TYPE.STUDENT,
     phone: row.phone,
+    name: row.name,
   }));
 }
 
@@ -39,7 +44,7 @@ async function resolveParents(filter: RecipientFilter): Promise<Recipient[]> {
   // parent.repository.ts's branch-scoped listing.
   let query = supabaseAdmin
     .from("parents")
-    .select("id, phone, students!parents_linked_student_id_fkey!inner(branch_id, course_id, year, semester, status)")
+    .select("id, name, phone, students!parents_linked_student_id_fkey!inner(branch_id, course_id, year, semester, status)")
     .eq("status", "ACTIVE")
     .eq("students.status", STUDENT_STATUS.ACTIVE);
 
@@ -55,6 +60,7 @@ async function resolveParents(filter: RecipientFilter): Promise<Recipient[]> {
     recipientId: row.id,
     recipientType: RECIPIENT_TYPE.PARENT,
     phone: row.phone,
+    name: row.name,
   }));
 }
 

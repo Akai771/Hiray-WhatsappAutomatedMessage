@@ -99,8 +99,21 @@ export function MessagesPage() {
     return m;
   }, [templatesForType]);
 
+  const selectedTemplate = useMemo(() => state.templates.find((t) => t.id === f.templateId), [state.templates, f.templateId]);
+
+  // The template's approved body is the real message shape (placeholders
+  // included). autoFillRecipientName fills {{1}} per-recipient server-side
+  // (a representative placeholder stands in here since there's no single
+  // "the" recipient to preview); otherwise what's typed in "Message" fills
+  // {{1}} identically for every recipient in the batch.
   const previewTitle = f.title || "Your notification title";
-  const previewBody = f.message || "Your message will appear here as you type.";
+  const previewBody = selectedTemplate?.bodyText
+    ? selectedTemplate.autoFillRecipientName
+      ? selectedTemplate.bodyText.replace(/\{\{\d+\}\}/g, "Recipient's Name")
+      : f.message
+        ? selectedTemplate.bodyText.replace(/\{\{\d+\}\}/g, f.message)
+        : selectedTemplate.bodyText
+    : f.message || "Your message will appear here as you type.";
   const previewHasCta = !!f.ctaLabel;
   const AttachmentIcon = f.attachment ? attachmentIcon(f.attachment.mimeType) : ImageIcon;
   const audienceLabelParts = [f.audience.students && "Students", f.audience.parents && "Parents"].filter(Boolean) as string[];
@@ -168,31 +181,58 @@ export function MessagesPage() {
                 </Select>
               </div>
             </div>
-            <div className="mb-4">
-              <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Title *</Label>
-              <Input
-                placeholder="e.g. Mid-Semester Exam Schedule"
-                value={f.title}
-                onChange={(e) => actions.setMsgField("title", e.target.value)}
-                className="h-9.5 text-[13.5px]"
-              />
-            </div>
-            <div>
-              <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Message *</Label>
-              <Textarea
-                placeholder="Type your WhatsApp message..."
-                rows={5}
-                value={f.message}
-                onChange={(e) => actions.setMsgField("message", e.target.value)}
-                className="resize-y text-[13.5px]"
-              />
-              <div className={cn("mt-1 text-right text-[11.5px]", msgCharCount > 1024 ? "text-destructive" : "text-muted-foreground")}>
-                {msgCharCount} / 1024 characters
+            {!selectedTemplate ? (
+              <div className="rounded-lg border border-dashed bg-muted/30 px-3.5 py-3 text-[12.5px] text-muted-foreground">
+                Select a WhatsApp Template above to see its approved content and what's left to fill in.
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Title (optional, internal label only — not sent to WhatsApp)</Label>
+                  <Input
+                    placeholder="e.g. Mid-Semester Exam Schedule"
+                    value={f.title}
+                    onChange={(e) => actions.setMsgField("title", e.target.value)}
+                    className="h-9.5 text-[13.5px]"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Template Content</Label>
+                  <div className="mb-2 rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-[12px] whitespace-pre-wrap text-muted-foreground">
+                    {selectedTemplate.bodyText || "(no body text saved for this template — add it in Settings → Message Templates)"}
+                  </div>
+                  {selectedTemplate.variables.length === 0 ? (
+                    <div className="text-[12px] text-muted-foreground italic">
+                      This template has no placeholders — the text above is sent exactly as-is.
+                    </div>
+                  ) : selectedTemplate.autoFillRecipientName ? (
+                    <div className="text-[12px] text-muted-foreground italic">
+                      This template personalizes the placeholder with each recipient's own name automatically — no message needed.
+                    </div>
+                  ) : (
+                    <>
+                      <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">
+                        Message * — fills the placeholder above, same value for every recipient
+                      </Label>
+                      <Textarea
+                        placeholder="Type your WhatsApp message..."
+                        rows={4}
+                        value={f.message}
+                        onChange={(e) => actions.setMsgField("message", e.target.value)}
+                        className="resize-y text-[13.5px]"
+                      />
+                      <div className={cn("mt-1 text-right text-[11.5px]", msgCharCount > 1024 ? "text-destructive" : "text-muted-foreground")}>
+                        {msgCharCount} / 1024 characters
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Attachment */}
+          {selectedTemplate?.attachmentAllowed && (
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Attachment (Optional)</div>
             <input
@@ -226,8 +266,10 @@ export function MessagesPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* CTA */}
+          {selectedTemplate?.buttonAllowed && (
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Call-to-Action (Optional)</div>
             <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
@@ -251,6 +293,7 @@ export function MessagesPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Recipients */}
           <div className="rounded-2xl border bg-card p-6">
@@ -349,9 +392,6 @@ export function MessagesPage() {
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Schedule *</div>
             <div className="mb-3.5 flex flex-wrap gap-2.5">
-              <Button variant="outline" onClick={actions.saveDraft} className="h-10 rounded-lg px-5 text-[13.5px] font-semibold">
-                Save as Draft
-              </Button>
               <Button
                 type="button"
                 variant="outline"

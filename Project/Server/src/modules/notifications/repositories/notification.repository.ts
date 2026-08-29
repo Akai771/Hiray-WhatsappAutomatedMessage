@@ -33,8 +33,8 @@ export async function create(input: CreateNotificationInput, status: string): Pr
     .from(TABLE)
     .insert({
       template_id: input.templateId,
-      title: input.title,
-      message: input.message,
+      title: input.title ?? null,
+      message: input.message ?? null,
       attachment_url: input.attachmentUrl ?? null,
       attachment_type: input.attachmentType ?? null,
       button_label: input.buttonLabel ?? null,

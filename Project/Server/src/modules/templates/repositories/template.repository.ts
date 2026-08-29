@@ -12,6 +12,8 @@ function mapRow(row: any): NotificationTemplate {
     whatsappTemplateName: row.whatsapp_template_name,
     category: row.category,
     variables: row.variables ?? [],
+    bodyText: row.body_text ?? "",
+    autoFillRecipientName: row.auto_fill_recipient_name ?? false,
     attachmentAllowed: row.attachment_allowed,
     buttonAllowed: row.button_allowed,
     createdAt: row.created_at,
@@ -27,6 +29,8 @@ export async function create(input: CreateTemplateInput): Promise<NotificationTe
       whatsapp_template_name: input.whatsappTemplateName,
       category: input.category,
       variables: input.variables,
+      body_text: input.bodyText,
+      auto_fill_recipient_name: input.autoFillRecipientName,
       attachment_allowed: input.attachmentAllowed,
       button_allowed: input.buttonAllowed,
     })
@@ -71,6 +75,8 @@ export async function update(id: string, input: UpdateTemplateInput): Promise<No
   if (input.whatsappTemplateName !== undefined) patch.whatsapp_template_name = input.whatsappTemplateName;
   if (input.category !== undefined) patch.category = input.category;
   if (input.variables !== undefined) patch.variables = input.variables;
+  if (input.bodyText !== undefined) patch.body_text = input.bodyText;
+  if (input.autoFillRecipientName !== undefined) patch.auto_fill_recipient_name = input.autoFillRecipientName;
   if (input.attachmentAllowed !== undefined) patch.attachment_allowed = input.attachmentAllowed;
   if (input.buttonAllowed !== undefined) patch.button_allowed = input.buttonAllowed;
 

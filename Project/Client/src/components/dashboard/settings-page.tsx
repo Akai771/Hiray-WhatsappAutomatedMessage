@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { NOTIF_TYPE_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
@@ -291,7 +292,11 @@ function TemplatesTab() {
                 {t.attachmentAllowed ? " · attachment allowed" : ""}
                 {t.buttonAllowed ? " · button allowed" : ""}
                 {t.variables.length ? ` · variables: ${t.variables.join(", ")}` : ""}
+                {t.autoFillRecipientName ? " · auto-fills recipient's name" : ""}
               </div>
+              {t.bodyText && (
+                <div className="mt-1 line-clamp-2 text-xs whitespace-pre-wrap text-muted-foreground/80 italic">{t.bodyText}</div>
+              )}
             </div>
             {canManage && (
               <span onClick={() => actions.deleteTemplate(t.id)} className="shrink-0 cursor-pointer text-[12.5px] font-semibold text-destructive">
@@ -349,6 +354,25 @@ function TemplatesTab() {
               className="h-9 text-[13px]"
             />
           </div>
+          <div className="sm:col-span-2">
+            <Label className="mb-1 text-xs font-semibold text-muted-foreground">Body Text (copy from WhatsApp Manager, keep {"{{1}}"} etc.)</Label>
+            <Textarea
+              placeholder={"Hello {{1}},\n\nThis is a test notification from Hiray Group of Institutes.\n\nRegards,\nCollege Administration"}
+              rows={4}
+              value={state.newTemplate.bodyText}
+              onChange={(e) => actions.setNewTemplateField("bodyText", e.target.value)}
+              className="text-[13px]"
+            />
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 sm:col-span-2">
+            <Checkbox
+              checked={state.newTemplate.autoFillRecipientName}
+              onCheckedChange={(v) => actions.setNewTemplateField("autoFillRecipientName", !!v)}
+            />
+            <span className="text-[12.5px] font-semibold">
+              Auto-fill {"{{1}}"} with each recipient's own name (skip manual message — only valid if the template's first variable is a name)
+            </span>
+          </label>
           <label className="flex cursor-pointer items-center gap-2">
             <Checkbox
               checked={state.newTemplate.attachmentAllowed}

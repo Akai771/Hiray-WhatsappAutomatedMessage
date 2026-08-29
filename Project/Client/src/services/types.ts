@@ -98,6 +98,8 @@ export interface ApiNotificationTemplate {
   whatsappTemplateName: string;
   category: TemplateCategory;
   variables: string[];
+  bodyText: string;
+  autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
   createdAt: string;
@@ -107,8 +109,8 @@ export interface ApiNotificationTemplate {
 export interface ApiNotification {
   id: string;
   templateId: string;
-  title: string;
-  message: string;
+  title: string | null;
+  message: string | null;
   attachmentUrl: string | null;
   attachmentType: string | null;
   buttonLabel: string | null;

@@ -10,8 +10,10 @@ import type {
 
 export interface CreateNotificationInput {
   templateId: string;
-  title: string;
-  message: string;
+  /** Internal label only, never sent to WhatsApp. */
+  title?: string;
+  /** Fills the template's {{1}}. Required only if the template has one. */
+  message?: string;
   attachmentUrl?: string;
   attachmentType?: string;
   buttonLabel?: string;

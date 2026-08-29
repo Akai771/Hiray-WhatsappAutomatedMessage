@@ -100,11 +100,22 @@ interface NewTemplateForm {
   whatsappTemplateName: string;
   category: TemplateCategory;
   variablesText: string;
+  bodyText: string;
+  autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
 }
 function emptyNewTemplate(): NewTemplateForm {
-  return { name: "", whatsappTemplateName: "", category: "UTILITY", variablesText: "", attachmentAllowed: false, buttonAllowed: false };
+  return {
+    name: "",
+    whatsappTemplateName: "",
+    category: "UTILITY",
+    variablesText: "",
+    bodyText: "",
+    autoFillRecipientName: false,
+    attachmentAllowed: false,
+    buttonAllowed: false,
+  };
 }
 
 interface AppState {
@@ -279,7 +290,7 @@ function useDashboardState(initialRole: Role) {
           return {
             id: n.id,
             date: new Date(n.createdAt).toLocaleString(),
-            title: n.title,
+            title: n.title || template?.name || "(untitled)",
             type: template?.category ?? "—",
             audience: audienceLabels || "—",
             recipients: report?.total ?? 0,
@@ -307,8 +318,9 @@ function useDashboardState(initialRole: Role) {
       toast.error("Select a WhatsApp template.");
       return;
     }
-    if (!f.title.trim() || !f.message.trim()) {
-      toast.error("Fill in Title and Message.");
+    const template = state.templates.find((t) => t.id === f.templateId);
+    if (template && template.variables.length > 0 && !template.autoFillRecipientName && !f.message.trim()) {
+      toast.error("This template has a placeholder to fill — enter a message.");
       return;
     }
     if (!f.audience.students && !f.audience.parents) {
@@ -329,12 +341,12 @@ function useDashboardState(initialRole: Role) {
     try {
       await notificationService.createNotification({
         templateId: f.templateId,
-        title: f.title,
-        message: f.message,
-        attachmentUrl: f.attachment?.url,
-        attachmentType: f.attachment?.mimeType,
-        buttonLabel: f.ctaLabel || undefined,
-        buttonUrl: f.ctaUrl || undefined,
+        title: f.title.trim() || undefined,
+        message: template && template.variables.length > 0 && !template.autoFillRecipientName ? f.message.trim() : undefined,
+        attachmentUrl: template?.attachmentAllowed ? f.attachment?.url : undefined,
+        attachmentType: template?.attachmentAllowed ? f.attachment?.mimeType : undefined,
+        buttonLabel: template?.buttonAllowed ? f.ctaLabel || undefined : undefined,
+        buttonUrl: template?.buttonAllowed ? f.ctaUrl || undefined : undefined,
         branchId: f.branchId === "all" ? undefined : f.branchId,
         courseId: f.courseId === "all" ? undefined : f.courseId,
         targetYear: f.year === "all" ? undefined : Number(f.year),
@@ -349,11 +361,7 @@ function useDashboardState(initialRole: Role) {
       toast.error(apiErrorMessage(err, "Failed to send notification."));
       setState((s) => ({ ...s, sendingNotification: false }));
     }
-  }, [state.msgForm, refreshHistory]);
-
-  const saveDraft = useCallback(() => {
-    toast.error("Saving drafts isn't available yet — send now or schedule instead.");
-  }, []);
+  }, [state.msgForm, state.templates, refreshHistory]);
 
   const setStudentFilter = useCallback(
     (key: keyof AppState["studentFilters"], val: string) =>
@@ -1017,6 +1025,10 @@ function useDashboardState(initialRole: Role) {
       toast.error("Name and WhatsApp template name are required.");
       return;
     }
+    if (!t.bodyText.trim()) {
+      toast.error("Paste the approved template's body text so the send page can preview it.");
+      return;
+    }
     const variables = t.variablesText
       .split(",")
       .map((v) => v.trim())
@@ -1027,6 +1039,8 @@ function useDashboardState(initialRole: Role) {
         whatsappTemplateName: t.whatsappTemplateName,
         category: t.category,
         variables,
+        bodyText: t.bodyText,
+        autoFillRecipientName: t.autoFillRecipientName,
         attachmentAllowed: t.attachmentAllowed,
         buttonAllowed: t.buttonAllowed,
       });
@@ -1062,7 +1076,6 @@ function useDashboardState(initialRole: Role) {
       openPreview,
       closePreview,
       sendNotification,
-      saveDraft,
       setStudentFilter,
       setStudentSearch,
       toggleStudentSelect,
@@ -1119,7 +1132,7 @@ function useDashboardState(initialRole: Role) {
     }),
     [
       setTab, setRole, setMsgField, toggleAudience, uploadMsgAttachment, removeMsgAttachment, setScheduleMode, resetMsgForm, openPreview, closePreview,
-      sendNotification, saveDraft, setStudentFilter, setStudentSearch, toggleStudentSelect, toggleSelectAllStudents, openAddStudent,
+      sendNotification, setStudentFilter, setStudentSearch, toggleStudentSelect, toggleSelectAllStudents, openAddStudent,
       openEditStudent, closeAddStudent, setStudentFormField, saveStudent, deleteStudent, bulkDeleteStudents, messageSelectedStudents,
       openImportStudents, closeImportStudents, importStudents, setParentFilter, setParentSearch, toggleParentSelect,
       toggleSelectAllParents, openAddParent, openEditParent, closeAddParent, setParentFormField, saveParent, deleteParent,

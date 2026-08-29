@@ -13,6 +13,21 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
   const template = await templateRepository.findById(input.templateId);
   if (!template) throw ApiError.notFound("Notification template not found");
 
+  // What the template actually allows drives what's valid here — a client
+  // UI can hide these fields based on the same flags, but that's just UX;
+  // this is what actually stops a bad payload from reaching WhatsApp.
+  // autoFillRecipientName templates need no typed message — {{1}} comes
+  // from each recipient's own name instead, built per-log below.
+  if (template.variables.length > 0 && !template.autoFillRecipientName && !input.message?.trim()) {
+    throw ApiError.badRequest("This template has a {{1}} placeholder — a message is required to fill it");
+  }
+  if (input.attachmentUrl && !template.attachmentAllowed) {
+    throw ApiError.badRequest("This template does not support an attachment");
+  }
+  if (input.buttonUrl && !template.buttonAllowed) {
+    throw ApiError.badRequest("This template does not support a CTA button");
+  }
+
   const branchId = resolveBranchScope(user, input.branchId);
 
   const scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : undefined;
@@ -34,27 +49,42 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
 
   const logs = await notificationLogRepository.createPendingLogs(notification.id, recipients);
 
+  // Keyed by recipientId so autoFillRecipientName can look up each log's own
+  // recipient name — recipients came from the same resolveRecipients() call
+  // that produced these logs, just not guaranteed to be in the same order.
+  const nameByRecipientId = new Map(recipients.map((r) => [r.recipientId, r.name]));
+
   const delay = isFutureSchedule ? scheduledAt!.getTime() - Date.now() : 0;
 
   await Promise.all(
-    logs.map((log) =>
-      notificationQueue.add(
+    logs.map((log) => {
+      // Notification model has no general per-variable value map
+      // (server.md) — only two sources fill the template's single body
+      // placeholder: one admin-typed value shared by the whole batch, or
+      // (autoFillRecipientName) each recipient's own name, built per-log
+      // here. A zero-variable template sends its approved body as-is.
+      const bodyVariables =
+        template.variables.length === 0
+          ? []
+          : template.autoFillRecipientName
+            ? [nameByRecipientId.get(log.recipientId) ?? ""]
+            : [input.message!.trim()];
+
+      return notificationQueue.add(
         SEND_NOTIFICATION_JOB,
         {
           logId: log.id,
           notificationId: notification.id,
           phone: log.phone,
           whatsappTemplateName: template.whatsappTemplateName,
-          // Notification model has no per-variable value map (server.md) —
-          // `message` fills the template's single body placeholder.
-          bodyVariables: [input.message],
+          bodyVariables,
           attachmentUrl: input.attachmentUrl,
           attachmentType: input.attachmentType,
           buttonUrl: input.buttonUrl,
         },
         { jobId: log.id, delay },
-      ),
-    ),
+      );
+    }),
   );
 
   return notification;

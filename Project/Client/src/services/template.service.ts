@@ -6,6 +6,8 @@ export interface CreateTemplateInput {
   whatsappTemplateName: string;
   category: TemplateCategory;
   variables: string[];
+  bodyText: string;
+  autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
 }
