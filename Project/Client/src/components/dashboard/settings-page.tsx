@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { NOTIF_TYPE_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
 import type { SettingsTab } from "@/lib/types";
+import { PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
   { key: "branches", label: "Branches" },
@@ -282,7 +283,13 @@ function TemplatesTab() {
           <div className="text-[13px] text-muted-foreground">No templates yet — add one below.</div>
         )}
         {state.templates.map((t) => (
-          <div key={t.id} className="flex items-center justify-between gap-2 rounded-[9px] border px-3.5 py-3">
+          <div
+            key={t.id}
+            className={cn(
+              "flex items-center justify-between gap-2 rounded-[9px] border px-3.5 py-3",
+              state.editingTemplateId === t.id && "border-primary",
+            )}
+          >
             <div className="min-w-0">
               <div className="truncate text-[13.5px] font-bold">
                 {t.name} <span className="font-medium text-muted-foreground">({t.whatsappTemplateName})</span>
@@ -299,15 +306,23 @@ function TemplatesTab() {
               )}
             </div>
             {canManage && (
-              <span onClick={() => actions.deleteTemplate(t.id)} className="shrink-0 cursor-pointer text-[12.5px] font-semibold text-destructive">
-                Delete
-              </span>
+              <div className="flex shrink-0 items-center gap-3">
+                <span onClick={() => actions.startEditTemplate(t)} className="cursor-pointer text-[12.5px] font-semibold text-primary">
+                  <PencilIcon size={16} />
+                </span>
+                <span onClick={() => actions.deleteTemplate(t.id)} className="cursor-pointer text-[12.5px] font-semibold text-destructive">
+                  <TrashIcon size={16} />
+                </span>
+              </div>
             )}
           </div>
         ))}
       </div>
       {canManage && (
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {state.editingTemplateId && (
+            <div className="sm:col-span-2 text-[12.5px] font-semibold text-primary">Editing template</div>
+          )}
           <div>
             <Label className="mb-1 text-xs font-semibold text-muted-foreground">Display Name</Label>
             <Input
@@ -384,9 +399,16 @@ function TemplatesTab() {
             <Checkbox checked={state.newTemplate.buttonAllowed} onCheckedChange={(v) => actions.setNewTemplateField("buttonAllowed", !!v)} />
             <span className="text-[12.5px] font-semibold">Allows CTA button</span>
           </label>
-          <Button onClick={actions.addTemplate} className="col-span-2 h-9 rounded-lg text-[13px] font-bold">
-            Add Template
-          </Button>
+          <div className="col-span-2 flex gap-2">
+            <Button onClick={actions.addTemplate} className="h-9 flex-1 rounded-lg text-[13px] font-bold">
+              {state.editingTemplateId ? "Save Changes" : "Add Template"}
+            </Button>
+            {state.editingTemplateId && (
+              <Button variant="outline" onClick={actions.cancelEditTemplate} className="h-9 rounded-lg px-5 text-[13px] font-bold">
+                Cancel
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>

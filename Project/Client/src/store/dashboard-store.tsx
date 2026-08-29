@@ -139,6 +139,7 @@ interface AppState {
   templates: ApiNotificationTemplate[];
   templatesLoading: boolean;
   newTemplate: NewTemplateForm;
+  editingTemplateId: string | null;
   history: HistoryRow[];
   historyLoading: boolean;
   sendingNotification: boolean;
@@ -191,6 +192,7 @@ function initialState(role: Role): AppState {
     templates: [],
     templatesLoading: true,
     newTemplate: emptyNewTemplate(),
+    editingTemplateId: null,
     history: [],
     historyLoading: true,
     sendingNotification: false,
@@ -1033,27 +1035,63 @@ function useDashboardState(initialRole: Role) {
       .split(",")
       .map((v) => v.trim())
       .filter(Boolean);
+    const payload = {
+      name: t.name,
+      whatsappTemplateName: t.whatsappTemplateName,
+      category: t.category,
+      variables,
+      bodyText: t.bodyText,
+      autoFillRecipientName: t.autoFillRecipientName,
+      attachmentAllowed: t.attachmentAllowed,
+      buttonAllowed: t.buttonAllowed,
+    };
     try {
-      const created = await templateService.createTemplate({
+      if (state.editingTemplateId) {
+        const updated = await templateService.updateTemplate(state.editingTemplateId, payload);
+        setState((s) => ({
+          ...s,
+          templates: s.templates.map((x) => (x.id === updated.id ? updated : x)),
+          newTemplate: emptyNewTemplate(),
+          editingTemplateId: null,
+        }));
+        toast.success("Template updated.");
+      } else {
+        const created = await templateService.createTemplate(payload);
+        setState((s) => ({ ...s, templates: [created, ...s.templates], newTemplate: emptyNewTemplate() }));
+        toast.success("Template added.");
+      }
+    } catch (err) {
+      toast.error(apiErrorMessage(err, state.editingTemplateId ? "Failed to update template." : "Failed to add template."));
+    }
+  }, [state.newTemplate, state.editingTemplateId]);
+  const startEditTemplate = useCallback((t: ApiNotificationTemplate) => {
+    setState((s) => ({
+      ...s,
+      editingTemplateId: t.id,
+      newTemplate: {
         name: t.name,
         whatsappTemplateName: t.whatsappTemplateName,
         category: t.category,
-        variables,
+        variablesText: t.variables.join(", "),
         bodyText: t.bodyText,
         autoFillRecipientName: t.autoFillRecipientName,
         attachmentAllowed: t.attachmentAllowed,
         buttonAllowed: t.buttonAllowed,
-      });
-      setState((s) => ({ ...s, templates: [created, ...s.templates], newTemplate: emptyNewTemplate() }));
-      toast.success("Template added.");
-    } catch (err) {
-      toast.error(apiErrorMessage(err, "Failed to add template."));
-    }
-  }, [state.newTemplate]);
+      },
+    }));
+  }, []);
+  const cancelEditTemplate = useCallback(
+    () => setState((s) => ({ ...s, editingTemplateId: null, newTemplate: emptyNewTemplate() })),
+    [],
+  );
   const deleteTemplate = useCallback(async (id: string) => {
     try {
       await templateService.deleteTemplate(id);
-      setState((s) => ({ ...s, templates: s.templates.filter((x) => x.id !== id) }));
+      setState((s) => ({
+        ...s,
+        templates: s.templates.filter((x) => x.id !== id),
+        ...(s.editingTemplateId === id ? { editingTemplateId: null, newTemplate: emptyNewTemplate() } : {}),
+      }));
       toast.success("Template deleted.");
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to delete template."));
@@ -1126,6 +1164,8 @@ function useDashboardState(initialRole: Role) {
       updateCourseSemesters,
       setNewTemplateField,
       addTemplate,
+      startEditTemplate,
+      cancelEditTemplate,
       deleteTemplate,
       setHistoryFilter,
       setHistorySearch,
@@ -1139,7 +1179,7 @@ function useDashboardState(initialRole: Role) {
       bulkDeleteParents, messageSelectedParents, openImportParents, setFacultyFilter, openAddFaculty, openEditFaculty,
       closeAddFaculty, setFacultyFormField, regenerateFacultyPassword, saveFaculty, toggleFacultyStatus, resetFacultyPassword, deleteFaculty, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
       setSelectedBranchForCourses, setNewCourseField, addCourse, deleteCourse, updateCourseYears, updateCourseSemesters,
-      setNewTemplateField, addTemplate, deleteTemplate, setHistoryFilter, setHistorySearch,
+      setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch,
     ],
   );
 
