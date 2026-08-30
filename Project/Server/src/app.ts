@@ -11,6 +11,13 @@ import { redisConnection } from "./config/redis";
 
 export const app = express();
 
+// Railway (and most PaaS hosts) sit behind a reverse proxy that sets
+// X-Forwarded-For. Without trust proxy enabled, express-rate-limit refuses
+// to trust that header and throws on every request instead of silently
+// misidentifying clients. `1` trusts exactly one hop — the platform's own
+// proxy — not an arbitrary chain an attacker could spoof.
+app.set("trust proxy", 1);
+
 app.use(helmet());
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(globalRateLimiter);

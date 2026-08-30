@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { CaretDownIcon, FileIcon, FilePdfIcon, ImageIcon, VideoIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, CaretDownIcon, FileIcon, FilePdfIcon, ImageIcon, VideoIcon, XIcon } from "@phosphor-icons/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,6 +116,14 @@ export function MessagesPage() {
     : f.message || "Your message will appear here as you type.";
   const previewHasCta = !!f.ctaLabel;
   const AttachmentIcon = f.attachment ? attachmentIcon(f.attachment.mimeType) : ImageIcon;
+  const previewAttachmentKind: "image" | "video" | "document" | undefined = !f.attachment
+    ? undefined
+    : f.attachment.mimeType.startsWith("image/")
+      ? "image"
+      : f.attachment.mimeType.startsWith("video/")
+        ? "video"
+        : "document";
+  const previewAttachmentImageUrl = previewAttachmentKind === "image" ? f.attachment?.url : undefined;
   const audienceLabelParts = [f.audience.students && "Students", f.audience.parents && "Parents"].filter(Boolean) as string[];
 
   const historyView = useMemo(
@@ -272,26 +280,32 @@ export function MessagesPage() {
           {selectedTemplate?.buttonAllowed && (
           <div className="rounded-2xl border bg-card p-6">
             <div className="mb-4.5 text-[15px] font-bold">Call-to-Action (Optional)</div>
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-              <div>
-                <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Button Label</Label>
-                <Input
-                  placeholder="e.g. View Details"
-                  value={f.ctaLabel}
-                  onChange={(e) => actions.setMsgField("ctaLabel", e.target.value)}
-                  className="h-9.5 text-[13.5px]"
-                />
+            {!selectedTemplate.buttonUrlIsDynamic ? (
+              <div className="text-[12.5px] text-muted-foreground italic">
+                This template's button uses one fixed URL set on WhatsApp Manager — nothing to configure per message.
               </div>
-              <div>
-                <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Button URL</Label>
-                <Input
-                  placeholder="https://"
-                  value={f.ctaUrl}
-                  onChange={(e) => actions.setMsgField("ctaUrl", e.target.value)}
-                  className="h-9.5 text-[13.5px]"
-                />
+            ) : (
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div>
+                  <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Button Label</Label>
+                  <Input
+                    placeholder="e.g. View Details"
+                    value={f.ctaLabel}
+                    onChange={(e) => actions.setMsgField("ctaLabel", e.target.value)}
+                    className="h-9.5 text-[13.5px]"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Button URL — fills the {"{{1}}"} suffix</Label>
+                  <Input
+                    placeholder="https://"
+                    value={f.ctaUrl}
+                    onChange={(e) => actions.setMsgField("ctaUrl", e.target.value)}
+                    className="h-9.5 text-[13.5px]"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
           )}
 
@@ -456,6 +470,8 @@ export function MessagesPage() {
               body={previewBody}
               hasAttachment={!!f.attachment}
               attachmentLabel={f.attachment?.name ?? ""}
+              attachmentImageUrl={previewAttachmentImageUrl}
+              attachmentKind={previewAttachmentKind}
               hasCta={previewHasCta}
               ctaLabel={f.ctaLabel}
               collegeName={COLLEGE_NAME}
@@ -489,6 +505,17 @@ export function MessagesPage() {
         <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
           <div className="text-[17px] font-extrabold">Message History</div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={state.historyLoading}
+              onClick={() => actions.refreshHistory()}
+              className="h-8.5 gap-1.5 rounded-md px-3 text-xs font-bold"
+            >
+              <ArrowClockwiseIcon className={cn("size-3.5", state.historyLoading && "animate-spin")} />
+              Refresh
+            </Button>
             <Input
               placeholder="Search by title..."
               value={state.historySearch}
@@ -643,6 +670,8 @@ export function MessagesPage() {
         body={previewBody}
         hasAttachment={!!f.attachment}
         attachmentLabel={f.attachment?.name ?? ""}
+        attachmentImageUrl={previewAttachmentImageUrl}
+        attachmentKind={previewAttachmentKind}
         hasCta={previewHasCta}
         ctaLabel={f.ctaLabel}
         recipientCount={recipientCount.total}
@@ -659,13 +688,28 @@ interface PreviewDialogProps {
   body: string;
   hasAttachment: boolean;
   attachmentLabel: string;
+  attachmentImageUrl?: string;
+  attachmentKind?: "image" | "video" | "document";
   hasCta: boolean;
   ctaLabel: string;
   recipientCount: number;
   audienceLabel: string;
 }
 
-function PreviewDialog({ open, onClose, title, body, hasAttachment, attachmentLabel, hasCta, ctaLabel, recipientCount, audienceLabel }: PreviewDialogProps) {
+function PreviewDialog({
+  open,
+  onClose,
+  title,
+  body,
+  hasAttachment,
+  attachmentLabel,
+  attachmentImageUrl,
+  attachmentKind,
+  hasCta,
+  ctaLabel,
+  recipientCount,
+  audienceLabel,
+}: PreviewDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-100 rounded-[20px] p-6">
@@ -678,6 +722,8 @@ function PreviewDialog({ open, onClose, title, body, hasAttachment, attachmentLa
             body={body}
             hasAttachment={hasAttachment}
             attachmentLabel={attachmentLabel}
+            attachmentImageUrl={attachmentImageUrl}
+            attachmentKind={attachmentKind}
             hasCta={hasCta}
             ctaLabel={ctaLabel}
             collegeName={COLLEGE_NAME}

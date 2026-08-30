@@ -10,6 +10,7 @@ export interface CreateTemplateInput {
   autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
+  buttonUrlIsDynamic: boolean;
 }
 
 export type UpdateTemplateInput = Partial<CreateTemplateInput>;

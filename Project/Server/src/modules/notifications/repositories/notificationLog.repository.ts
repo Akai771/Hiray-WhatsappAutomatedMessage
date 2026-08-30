@@ -116,7 +116,14 @@ export async function getDeliveryReport(notificationId: string): Promise<Deliver
         report.delivered++;
         break;
       case "READ":
+        // `status` holds only the latest webhook event, not every stage a
+        // message passed through — WhatsApp fires delivered then read in
+        // quick succession, overwriting DELIVERED before anyone reads this
+        // report. A READ message was necessarily delivered first, so count
+        // it under both, or "Delivered" would misleadingly read 0 once a
+        // message's been opened.
         report.read++;
+        report.delivered++;
         break;
       case "FAILED":
         report.failed++;

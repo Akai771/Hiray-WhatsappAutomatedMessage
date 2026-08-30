@@ -1,10 +1,14 @@
-import { ImageIcon, ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { FileIcon, ImageIcon, VideoIcon, ArrowSquareOutIcon } from "@phosphor-icons/react";
 
 interface WhatsappPreviewProps {
   title: string;
   body: string;
   hasAttachment: boolean;
   attachmentLabel: string;
+  /** Set when the attachment is an image — renders the real image instead of a placeholder icon. */
+  attachmentImageUrl?: string;
+  /** "image" | "video" | "document" — picks the placeholder icon for non-image attachments. */
+  attachmentKind?: "image" | "video" | "document";
   hasCta: boolean;
   ctaLabel: string;
   collegeName: string;
@@ -16,6 +20,8 @@ export function WhatsappPreview({
   body,
   hasAttachment,
   attachmentLabel,
+  attachmentImageUrl,
+  attachmentKind,
   hasCta,
   ctaLabel,
   collegeName,
@@ -35,10 +41,22 @@ export function WhatsappPreview({
       <div className="overflow-hidden rounded-lg bg-[#242626]">
         <div className="px-3.5 pt-3.5">
           {hasAttachment && (
-            <div className="mb-3 flex h-25 flex-col items-center justify-center gap-1.5 rounded-[10px] border border-[#3b4a54] text-[11.5px] text-[#8696a0]">
-              <ImageIcon className="size-6.5" strokeWidth={1.5} />
-              {attachmentLabel}
-            </div>
+            attachmentImageUrl ? (
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-[#3b4a54]">
+                <img src={attachmentImageUrl} alt={attachmentLabel} className="h-40 w-full object-cover" />
+              </div>
+            ) : (
+              <div className="mb-3 flex h-25 flex-col items-center justify-center gap-1.5 rounded-[10px] border border-[#3b4a54] text-[11.5px] text-[#8696a0]">
+                {attachmentKind === "video" ? (
+                  <VideoIcon className="size-6.5" strokeWidth={1.5} />
+                ) : attachmentKind === "document" ? (
+                  <FileIcon className="size-6.5" strokeWidth={1.5} />
+                ) : (
+                  <ImageIcon className="size-6.5" strokeWidth={1.5} />
+                )}
+                {attachmentLabel}
+              </div>
+            )
           )}
           <div className="mb-0.5 text-[13.5px] font-bold text-white">{title}</div>
           <div className="text-[13px] leading-snug whitespace-pre-wrap text-white">{body}</div>

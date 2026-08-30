@@ -104,6 +104,7 @@ interface NewTemplateForm {
   autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
+  buttonUrlIsDynamic: boolean;
 }
 function emptyNewTemplate(): NewTemplateForm {
   return {
@@ -115,6 +116,7 @@ function emptyNewTemplate(): NewTemplateForm {
     autoFillRecipientName: false,
     attachmentAllowed: false,
     buttonAllowed: false,
+    buttonUrlIsDynamic: false,
   };
 }
 
@@ -348,7 +350,7 @@ function useDashboardState(initialRole: Role) {
         attachmentUrl: template?.attachmentAllowed ? f.attachment?.url : undefined,
         attachmentType: template?.attachmentAllowed ? f.attachment?.mimeType : undefined,
         buttonLabel: template?.buttonAllowed ? f.ctaLabel || undefined : undefined,
-        buttonUrl: template?.buttonAllowed ? f.ctaUrl || undefined : undefined,
+        buttonUrl: template?.buttonAllowed && template.buttonUrlIsDynamic ? f.ctaUrl || undefined : undefined,
         branchId: f.branchId === "all" ? undefined : f.branchId,
         courseId: f.courseId === "all" ? undefined : f.courseId,
         targetYear: f.year === "all" ? undefined : Number(f.year),
@@ -1044,6 +1046,7 @@ function useDashboardState(initialRole: Role) {
       autoFillRecipientName: t.autoFillRecipientName,
       attachmentAllowed: t.attachmentAllowed,
       buttonAllowed: t.buttonAllowed,
+      buttonUrlIsDynamic: t.buttonUrlIsDynamic,
     };
     try {
       if (state.editingTemplateId) {
@@ -1077,6 +1080,7 @@ function useDashboardState(initialRole: Role) {
         autoFillRecipientName: t.autoFillRecipientName,
         attachmentAllowed: t.attachmentAllowed,
         buttonAllowed: t.buttonAllowed,
+        buttonUrlIsDynamic: t.buttonUrlIsDynamic,
       },
     }));
   }, []);
@@ -1169,6 +1173,7 @@ function useDashboardState(initialRole: Role) {
       deleteTemplate,
       setHistoryFilter,
       setHistorySearch,
+      refreshHistory,
     }),
     [
       setTab, setRole, setMsgField, toggleAudience, uploadMsgAttachment, removeMsgAttachment, setScheduleMode, resetMsgForm, openPreview, closePreview,
@@ -1179,7 +1184,7 @@ function useDashboardState(initialRole: Role) {
       bulkDeleteParents, messageSelectedParents, openImportParents, setFacultyFilter, openAddFaculty, openEditFaculty,
       closeAddFaculty, setFacultyFormField, regenerateFacultyPassword, saveFaculty, toggleFacultyStatus, resetFacultyPassword, deleteFaculty, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
       setSelectedBranchForCourses, setNewCourseField, addCourse, deleteCourse, updateCourseYears, updateCourseSemesters,
-      setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch,
+      setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch, refreshHistory,
     ],
   );
 

@@ -14,6 +14,7 @@ export const createTemplateSchema = z.object({
   autoFillRecipientName: z.boolean().default(false),
   attachmentAllowed: z.boolean().default(false),
   buttonAllowed: z.boolean().default(false),
+  buttonUrlIsDynamic: z.boolean().default(false),
 });
 
 export const updateTemplateSchema = z.object({
@@ -25,6 +26,7 @@ export const updateTemplateSchema = z.object({
   autoFillRecipientName: z.boolean().optional(),
   attachmentAllowed: z.boolean().optional(),
   buttonAllowed: z.boolean().optional(),
+  buttonUrlIsDynamic: z.boolean().optional(),
 });
 
 export const listTemplatesQuerySchema = paginationQuerySchema.extend({

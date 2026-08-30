@@ -27,6 +27,11 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
   if (input.buttonUrl && !template.buttonAllowed) {
     throw ApiError.badRequest("This template does not support a CTA button");
   }
+  // A static-URL button is fixed at approval — WhatsApp rejects any button
+  // parameter sent with it, so there's nothing for an admin to fill in here.
+  if (input.buttonUrl && template.buttonAllowed && !template.buttonUrlIsDynamic) {
+    throw ApiError.badRequest("This template's button URL is fixed and does not accept a custom URL");
+  }
 
   const branchId = resolveBranchScope(user, input.branchId);
 
@@ -80,7 +85,9 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
           bodyVariables,
           attachmentUrl: input.attachmentUrl,
           attachmentType: input.attachmentType,
-          buttonUrl: input.buttonUrl,
+          // Only a dynamic button takes a parameter — a static one must get
+          // no button component at all (see buildComponents in the worker).
+          buttonUrl: template.buttonUrlIsDynamic ? input.buttonUrl : undefined,
         },
         { jobId: log.id, delay },
       );

@@ -297,7 +297,7 @@ function TemplatesTab() {
               <div className="truncate text-xs text-muted-foreground">
                 {NOTIF_TYPE_LABEL[t.category]}
                 {t.attachmentAllowed ? " · attachment allowed" : ""}
-                {t.buttonAllowed ? " · button allowed" : ""}
+                {t.buttonAllowed ? ` · button allowed (${t.buttonUrlIsDynamic ? "dynamic URL" : "fixed URL"})` : ""}
                 {t.variables.length ? ` · variables: ${t.variables.join(", ")}` : ""}
                 {t.autoFillRecipientName ? " · auto-fills recipient's name" : ""}
               </div>
@@ -399,6 +399,17 @@ function TemplatesTab() {
             <Checkbox checked={state.newTemplate.buttonAllowed} onCheckedChange={(v) => actions.setNewTemplateField("buttonAllowed", !!v)} />
             <span className="text-[12.5px] font-semibold">Allows CTA button</span>
           </label>
+          {state.newTemplate.buttonAllowed && (
+            <label className="flex cursor-pointer items-center gap-2 sm:col-span-2">
+              <Checkbox
+                checked={state.newTemplate.buttonUrlIsDynamic}
+                onCheckedChange={(v) => actions.setNewTemplateField("buttonUrlIsDynamic", !!v)}
+              />
+              <span className="text-[12.5px] font-semibold">
+                Button URL is dynamic (ends in {"{{1}}"} on WhatsApp Manager) — leave unchecked if the approved button uses one fixed URL
+              </span>
+            </label>
+          )}
           <div className="col-span-2 flex gap-2">
             <Button onClick={actions.addTemplate} className="h-9 flex-1 rounded-lg text-[13px] font-bold">
               {state.editingTemplateId ? "Save Changes" : "Add Template"}

@@ -16,6 +16,10 @@ export interface NotificationTemplate {
   autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
+  // Only meaningful when buttonAllowed is true. false = the approved button
+  // has one fixed URL baked in — WhatsApp rejects any button parameter sent
+  // with it. true = the approved URL ends in {{1}}, a suffix filled per-send.
+  buttonUrlIsDynamic: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +33,7 @@ export interface CreateTemplateInput {
   autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
+  buttonUrlIsDynamic: boolean;
 }
 
 export interface UpdateTemplateInput {
@@ -40,4 +45,5 @@ export interface UpdateTemplateInput {
   autoFillRecipientName?: boolean;
   attachmentAllowed?: boolean;
   buttonAllowed?: boolean;
+  buttonUrlIsDynamic?: boolean;
 }

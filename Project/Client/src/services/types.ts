@@ -102,6 +102,7 @@ export interface ApiNotificationTemplate {
   autoFillRecipientName: boolean;
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
+  buttonUrlIsDynamic: boolean;
   createdAt: string;
   updatedAt: string;
 }

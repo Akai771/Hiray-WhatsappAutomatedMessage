@@ -32,6 +32,10 @@ function buildComponents(data: SendNotificationJobData): WhatsAppTemplateCompone
     });
   }
 
+  // notification.service.ts only sets buttonUrl when the template's button
+  // was approved as dynamic ({{1}} suffix) — a static-URL button must never
+  // get a button component at all, or WhatsApp rejects the send with
+  // #132018 ("Button ... does not require parameters").
   if (data.buttonUrl) {
     components.push({
       type: "button",
