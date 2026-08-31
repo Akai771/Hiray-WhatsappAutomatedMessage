@@ -379,7 +379,7 @@ export function MessagesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Years</SelectItem>
-                    {[1, 2, 3, 4, 5, 6].map((y) => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((y) => (
                       <SelectItem key={y} value={String(y)}>
                         Year {y}
                       </SelectItem>
