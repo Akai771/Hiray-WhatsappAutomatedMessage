@@ -69,14 +69,14 @@ const tooltipStyle = {
 };
 const axisTick = { fill: "var(--muted-foreground)", fontSize: 11 };
 
-function HorizontalBarChart({ data, dataKey, nameKey }: { data: Record<string, unknown>[]; dataKey: string; nameKey: string }) {
+function HorizontalBarChart<T extends object>({ data, dataKey, nameKey }: { data: T[]; dataKey: keyof T & string; nameKey: keyof T & string }) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(180, data.length * 34)}>
       <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
         <XAxis type="number" allowDecimals={false} tick={axisTick} axisLine={{ stroke: "var(--border)" }} tickLine={false} />
         <YAxis
           type="category"
-          dataKey={nameKey}
+          dataKey={nameKey as string}
           width={150}
           tick={axisTick}
           axisLine={{ stroke: "var(--border)" }}
@@ -84,7 +84,7 @@ function HorizontalBarChart({ data, dataKey, nameKey }: { data: Record<string, u
           interval={0}
         />
         <Tooltip cursor={{ fill: "var(--muted)" }} contentStyle={tooltipStyle} />
-        <Bar dataKey={dataKey} fill="var(--primary)" radius={[0, 6, 6, 0]} maxBarSize={22} />
+        <Bar dataKey={dataKey as string} fill="var(--primary)" radius={[0, 6, 6, 0]} maxBarSize={22} />
       </BarChart>
     </ResponsiveContainer>
   );
