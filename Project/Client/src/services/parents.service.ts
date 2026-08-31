@@ -22,6 +22,7 @@ export interface ListParentsFilter {
   branchId?: string;
   linkedStudentId?: string;
   status?: EntityStatus;
+  relation?: ParentRelation;
   search?: string;
 }
 

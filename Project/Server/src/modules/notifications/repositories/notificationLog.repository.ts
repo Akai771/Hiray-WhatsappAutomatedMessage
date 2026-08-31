@@ -132,3 +132,42 @@ export async function getDeliveryReport(notificationId: string): Promise<Deliver
   }
   return report;
 }
+
+// Same aggregation as getDeliveryReport, but for many notifications in one
+// query instead of one query per notification. The history list was calling
+// getDeliveryReport once per row (up to 50 separate round-trips per page
+// load) — this collapses that into a single query.
+export async function getBulkDeliveryReports(notificationIds: string[]): Promise<Record<string, DeliveryReport>> {
+  const reports: Record<string, DeliveryReport> = {};
+  for (const id of notificationIds) reports[id] = { total: 0, pending: 0, sent: 0, delivered: 0, read: 0, failed: 0 };
+  if (notificationIds.length === 0) return reports;
+
+  const { data, error } = await supabaseAdmin.from(TABLE).select("notification_id, status").in("notification_id", notificationIds);
+  if (error) throw ApiError.internal("Failed to compute delivery reports", error.message);
+
+  for (const row of data ?? []) {
+    const report = reports[row.notification_id];
+    if (!report) continue;
+    report.total++;
+    switch (row.status) {
+      case "PENDING":
+        report.pending++;
+        break;
+      case "SENT":
+        report.sent++;
+        break;
+      case "DELIVERED":
+        report.delivered++;
+        break;
+      case "READ":
+        // Same READ-implies-delivered reasoning as getDeliveryReport above.
+        report.read++;
+        report.delivered++;
+        break;
+      case "FAILED":
+        report.failed++;
+        break;
+    }
+  }
+  return reports;
+}

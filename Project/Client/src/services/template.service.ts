@@ -11,6 +11,7 @@ export interface CreateTemplateInput {
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
   buttonUrlIsDynamic: boolean;
+  hasTextHeader: boolean;
 }
 
 export type UpdateTemplateInput = Partial<CreateTemplateInput>;

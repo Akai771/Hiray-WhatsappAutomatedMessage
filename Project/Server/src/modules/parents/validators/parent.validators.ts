@@ -23,6 +23,7 @@ export const listParentsQuerySchema = paginationQuerySchema.extend({
   branchId: z.uuid().optional(),
   linkedStudentId: z.uuid().optional(),
   status: z.enum([ENTITY_STATUS.ACTIVE, ENTITY_STATUS.INACTIVE]).optional(),
+  relation: z.enum([PARENT_RELATION.FATHER, PARENT_RELATION.MOTHER, PARENT_RELATION.GUARDIAN]).optional(),
   search: z.string().max(200).optional(),
 });
 

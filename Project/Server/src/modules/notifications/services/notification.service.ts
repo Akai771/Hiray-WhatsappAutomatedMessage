@@ -9,6 +9,29 @@ import { NOTIFICATION_STATUS } from "../../../shared/constants";
 import type { AuthUser } from "../../../shared/types";
 import type { CreateNotificationInput } from "../types/notification.types";
 
+// autoFillRecipientName always claims {{1}} specifically (that's the
+// convention every template here follows: "Hello {{1}},") — every other
+// placeholder is admin-typed and shared across the whole batch. This is how
+// many of those the admin actually has to fill in.
+function manualVariableCount(template: { variables: string[]; autoFillRecipientName: boolean }): number {
+  return Math.max(0, template.variables.length - (template.autoFillRecipientName ? 1 : 0));
+}
+
+// Expands the template's {{1}}..{{n}} into one ordered array per send: the
+// auto-filled slot (if any) comes from this recipient's own name, everything
+// else comes from the admin-typed values in positional order.
+function buildBodyVariables(
+  template: { variables: string[]; autoFillRecipientName: boolean },
+  manualValues: string[] | undefined,
+  recipientName: string,
+): string[] {
+  let manualIndex = 0;
+  return template.variables.map((_, i) => {
+    if (i === 0 && template.autoFillRecipientName) return recipientName;
+    return (manualValues?.[manualIndex++] ?? "").trim();
+  });
+}
+
 export async function createNotification(user: AuthUser, input: CreateNotificationInput) {
   const template = await templateRepository.findById(input.templateId);
   if (!template) throw ApiError.notFound("Notification template not found");
@@ -16,13 +39,24 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
   // What the template actually allows drives what's valid here — a client
   // UI can hide these fields based on the same flags, but that's just UX;
   // this is what actually stops a bad payload from reaching WhatsApp.
-  // autoFillRecipientName templates need no typed message — {{1}} comes
-  // from each recipient's own name instead, built per-log below.
-  if (template.variables.length > 0 && !template.autoFillRecipientName && !input.message?.trim()) {
-    throw ApiError.badRequest("This template has a {{1}} placeholder — a message is required to fill it");
+  const neededValues = manualVariableCount(template);
+  if (neededValues > 0) {
+    const values = input.variableValues ?? [];
+    if (values.length !== neededValues || values.some((v) => !v.trim())) {
+      throw ApiError.badRequest(
+        `This template needs ${neededValues} value${neededValues === 1 ? "" : "s"} to fill its placeholders`,
+      );
+    }
   }
   if (input.attachmentUrl && !template.attachmentAllowed) {
     throw ApiError.badRequest("This template does not support an attachment");
+  }
+  // attachmentAllowed means the approved template has a media header
+  // (IMAGE/VIDEO/DOCUMENT) — that header component is mandatory on every
+  // send, not optional decoration. Skipping the upload here would send a
+  // request WhatsApp rejects for missing the header parameter.
+  if (template.attachmentAllowed && !input.attachmentUrl) {
+    throw ApiError.badRequest("This template requires an attachment — upload an image, video, or document first");
   }
   if (input.buttonUrl && !template.buttonAllowed) {
     throw ApiError.badRequest("This template does not support a CTA button");
@@ -63,17 +97,7 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
 
   await Promise.all(
     logs.map((log) => {
-      // Notification model has no general per-variable value map
-      // (server.md) — only two sources fill the template's single body
-      // placeholder: one admin-typed value shared by the whole batch, or
-      // (autoFillRecipientName) each recipient's own name, built per-log
-      // here. A zero-variable template sends its approved body as-is.
-      const bodyVariables =
-        template.variables.length === 0
-          ? []
-          : template.autoFillRecipientName
-            ? [nameByRecipientId.get(log.recipientId) ?? ""]
-            : [input.message!.trim()];
+      const bodyVariables = buildBodyVariables(template, input.variableValues, nameByRecipientId.get(log.recipientId) ?? "");
 
       return notificationQueue.add(
         SEND_NOTIFICATION_JOB,
@@ -105,7 +129,13 @@ export async function listNotifications(
   status?: string,
 ) {
   const branchId = resolveBranchScope(user, requestedBranchId);
-  return notificationRepository.findAll(page, limit, { branchId, status });
+  const { items, pagination } = await notificationRepository.findAll(page, limit, { branchId, status });
+
+  // One query for every notification on this page instead of the client
+  // firing a separate getDeliveryReport request per row — that N+1 was what
+  // made the history page slow to load.
+  const reports = await notificationLogRepository.getBulkDeliveryReports(items.map((n) => n.id));
+  return { items: items.map((n) => ({ ...n, deliveryReport: reports[n.id] })), pagination };
 }
 
 async function getScopedNotification(user: AuthUser, id: string) {

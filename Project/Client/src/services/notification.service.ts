@@ -12,8 +12,12 @@ export interface CreateNotificationInput {
   templateId: string;
   /** Internal label only, never sent to WhatsApp. */
   title?: string;
-  /** Fills the template's {{1}}. Required only if the template has one. */
-  message?: string;
+  /**
+   * Ordered values for the template's placeholders, excluding the
+   * auto-filled recipient-name slot (if any) — e.g. a 4-variable template
+   * with autoFillRecipientName only needs 3 of these.
+   */
+  variableValues?: string[];
   attachmentUrl?: string;
   attachmentType?: string;
   buttonLabel?: string;

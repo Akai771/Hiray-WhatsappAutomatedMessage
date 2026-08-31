@@ -33,5 +33,6 @@ export interface ListParentsFilter {
   branchId?: string;
   linkedStudentId?: string;
   status?: string;
+  relation?: string;
   search?: string;
 }

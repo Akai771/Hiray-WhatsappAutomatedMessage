@@ -9,13 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { statusBadgeClass } from "@/lib/badge-styles";
 import { computeRecipientCount } from "@/lib/recipient-count";
 import { useDashboard } from "@/store/dashboard-store";
 import { useAuth } from "@/store/auth-store";
 import { WhatsappPreview } from "@/components/dashboard/whatsapp-preview";
+import { PaginationBar } from "@/components/dashboard/pagination-bar";
 import { NOTIFICATION_STATUS_LABEL, NOTIF_TYPE_LABEL } from "@/lib/types";
 
 const HISTORY_FILTERS = ["All", ...Object.values(NOTIFICATION_STATUS_LABEL)];
@@ -87,8 +87,6 @@ export function MessagesPage() {
     () => computeRecipientCount({ students: state.students, parents: state.parents }, f),
     [state.students, state.parents, f],
   );
-  const msgCharCount = f.message.length;
-
   const templatesForType = useMemo(
     () => (f.notifType ? state.templates.filter((t) => t.category === f.notifType) : state.templates),
     [state.templates, f.notifType],
@@ -101,19 +99,33 @@ export function MessagesPage() {
 
   const selectedTemplate = useMemo(() => state.templates.find((t) => t.id === f.templateId), [state.templates, f.templateId]);
 
+  // autoFillRecipientName always claims {{1}} specifically — every other
+  // placeholder is admin-typed here, in order, shared across the whole batch.
+  const manualVariableLabels = useMemo(
+    () => (selectedTemplate ? (selectedTemplate.autoFillRecipientName ? selectedTemplate.variables.slice(1) : selectedTemplate.variables) : []),
+    [selectedTemplate],
+  );
+
   // The template's approved body is the real message shape (placeholders
-  // included). autoFillRecipientName fills {{1}} per-recipient server-side
-  // (a representative placeholder stands in here since there's no single
-  // "the" recipient to preview); otherwise what's typed in "Message" fills
-  // {{1}} identically for every recipient in the batch.
-  const previewTitle = f.title || "Your notification title";
+  // included). Each {{n}} is replaced positionally: the auto-filled slot (if
+  // any) shows a stand-in name since there's no single "the" recipient to
+  // preview, the rest show whatever's typed so far (or the placeholder
+  // number itself until filled in).
+  // Title is always usable as an internal label (never sent to WhatsApp) —
+  // it only shows in the live preview when the approved template actually
+  // has a text header, matching what the real message will look like.
+  const previewTitle = selectedTemplate?.hasTextHeader ? f.title || "Your notification title" : "";
   const previewBody = selectedTemplate?.bodyText
-    ? selectedTemplate.autoFillRecipientName
-      ? selectedTemplate.bodyText.replace(/\{\{\d+\}\}/g, "Recipient's Name")
-      : f.message
-        ? selectedTemplate.bodyText.replace(/\{\{\d+\}\}/g, f.message)
-        : selectedTemplate.bodyText
-    : f.message || "Your message will appear here as you type.";
+    ? (() => {
+        let manualIndex = 0;
+        return selectedTemplate.bodyText.replace(/\{\{(\d+)\}\}/g, (match, n) => {
+          const i = Number(n) - 1;
+          if (i === 0 && selectedTemplate.autoFillRecipientName) return "Recipient's Name";
+          const val = f.variableValues[manualIndex++];
+          return val?.trim() ? val : match;
+        });
+      })()
+    : "Your message will appear here as you type.";
   const previewHasCta = !!f.ctaLabel;
   const AttachmentIcon = f.attachment ? attachmentIcon(f.attachment.mimeType) : ImageIcon;
   const previewAttachmentKind: "image" | "video" | "document" | undefined = !f.attachment
@@ -158,7 +170,7 @@ export function MessagesPage() {
                   items={NOTIF_TYPE_LABEL}
                   onValueChange={(v) => {
                     actions.setMsgField("notifType", (v ?? "") as typeof f.notifType);
-                    actions.setMsgField("templateId", "");
+                    actions.selectMsgTemplate("");
                   }}
                 >
                   <SelectTrigger className="h-9.5 w-full text-[13.5px]">
@@ -175,7 +187,7 @@ export function MessagesPage() {
               </div>
               <div>
                 <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">WhatsApp Template *</Label>
-                <Select value={f.templateId} items={templateItems} onValueChange={(v) => actions.setMsgField("templateId", v ?? "")}>
+                <Select value={f.templateId} items={templateItems} onValueChange={(v) => actions.selectMsgTemplate(v ?? "")}>
                   <SelectTrigger className="h-9.5 w-full text-[13.5px]">
                     <SelectValue placeholder={templatesForType.length ? "Select" : "No templates yet"} />
                   </SelectTrigger>
@@ -213,25 +225,30 @@ export function MessagesPage() {
                     <div className="text-[12px] text-muted-foreground italic">
                       This template has no placeholders — the text above is sent exactly as-is.
                     </div>
-                  ) : selectedTemplate.autoFillRecipientName ? (
-                    <div className="text-[12px] text-muted-foreground italic">
-                      This template personalizes the placeholder with each recipient's own name automatically — no message needed.
-                    </div>
                   ) : (
                     <>
-                      <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">
-                        Message * — fills the placeholder above, same value for every recipient
-                      </Label>
-                      <Textarea
-                        placeholder="Type your WhatsApp message..."
-                        rows={4}
-                        value={f.message}
-                        onChange={(e) => actions.setMsgField("message", e.target.value)}
-                        className="resize-y text-[13.5px]"
-                      />
-                      <div className={cn("mt-1 text-right text-[11.5px]", msgCharCount > 1024 ? "text-destructive" : "text-muted-foreground")}>
-                        {msgCharCount} / 1024 characters
-                      </div>
+                      {selectedTemplate.autoFillRecipientName && (
+                        <div className="mb-3 text-[12px] text-muted-foreground italic">
+                          {"{{1}}"} personalizes automatically with each recipient's own name — no input needed for it.
+                        </div>
+                      )}
+                      {manualVariableLabels.length > 0 && (
+                        <div className="flex flex-col gap-3">
+                          {manualVariableLabels.map((label, i) => (
+                            <div key={i}>
+                              <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">
+                                {label || `Placeholder {{${selectedTemplate.autoFillRecipientName ? i + 2 : i + 1}}}`} * — same value for every recipient
+                              </Label>
+                              <Input
+                                placeholder={`Enter ${label || "value"}...`}
+                                value={f.variableValues[i] ?? ""}
+                                onChange={(e) => actions.setVariableValue(i, e.target.value)}
+                                className="h-9.5 text-[13.5px]"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -571,7 +588,14 @@ export function MessagesPage() {
                 <details key={h.id} className="group px-4 py-3">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
                     <div className="min-w-0">
-                      <div className="truncate text-[13px] font-semibold">{h.title}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-[13px] font-semibold">{h.title}</span>
+                        {h.type !== "—" && (
+                          <Badge variant="secondary" className={cn("h-4.5 shrink-0 px-1.5 text-[9.5px]", statusBadgeClass(NOTIF_TYPE_LABEL[h.type]))}>
+                            {NOTIF_TYPE_LABEL[h.type]}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-[11.5px] text-muted-foreground">{h.date}</div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -583,14 +607,16 @@ export function MessagesPage() {
                   </summary>
                   <div className="mt-3 flex flex-col gap-1.5 text-[12.5px]">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <Badge variant="secondary" className={statusBadgeClass(h.type === "—" ? "—" : NOTIF_TYPE_LABEL[h.type])}>
-                        {h.type === "—" ? "—" : NOTIF_TYPE_LABEL[h.type]}
-                      </Badge>
+                      <span className="text-muted-foreground">Sent By</span>
+                      <span className="font-semibold">{h.sentBy}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Audience</span>
                       <span className="font-semibold">{h.audience}</span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="shrink-0 text-muted-foreground">Scope</span>
+                      <span className="text-right font-semibold">{h.scopeLabel}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Recipients</span>
@@ -622,10 +648,9 @@ export function MessagesPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Date</TableHead>
-                <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Title</TableHead>
-                <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Type</TableHead>
-                <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Audience</TableHead>
+                <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Notification</TableHead>
+                <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Sent By</TableHead>
+                <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Audience &amp; Scope</TableHead>
                 <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Recipients</TableHead>
                 <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Status</TableHead>
                 <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Delivered / Read / Failed</TableHead>
@@ -634,14 +659,14 @@ export function MessagesPage() {
             <TableBody>
               {state.historyLoading && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-[13px] text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-[13px] text-muted-foreground">
                     Loading message history…
                   </TableCell>
                 </TableRow>
               )}
               {!state.historyLoading && historyView.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-[13px] text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-[13px] text-muted-foreground">
                     No notifications yet.
                   </TableCell>
                 </TableRow>
@@ -649,14 +674,22 @@ export function MessagesPage() {
               {!state.historyLoading &&
                 historyView.map((h) => (
                   <TableRow key={h.id}>
-                    <TableCell className="text-[13px]">{h.date}</TableCell>
-                    <TableCell className="text-[13px] font-semibold">{h.title}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className={statusBadgeClass(h.type === "—" ? "—" : NOTIF_TYPE_LABEL[h.type])}>
-                        {h.type === "—" ? "—" : NOTIF_TYPE_LABEL[h.type]}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[13px] font-semibold">{h.title}</span>
+                        {h.type !== "—" && (
+                          <Badge variant="secondary" className={cn("h-4.5 shrink-0 px-1.5 text-[9.5px]", statusBadgeClass(NOTIF_TYPE_LABEL[h.type]))}>
+                            {NOTIF_TYPE_LABEL[h.type]}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">{h.date}</div>
                     </TableCell>
-                    <TableCell className="text-[13px]">{h.audience}</TableCell>
+                    <TableCell className="text-[13px]">{h.sentBy}</TableCell>
+                    <TableCell>
+                      <div className="text-[13px] font-semibold">{h.audience}</div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">{h.scopeLabel}</div>
+                    </TableCell>
                     <TableCell className="text-[13px]">{h.recipients.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={statusBadgeClass(NOTIFICATION_STATUS_LABEL[h.status])}>
@@ -683,6 +716,7 @@ export function MessagesPage() {
           </Table>
           </div>
         </div>
+        <PaginationBar pagination={state.historyPagination} onPageChange={actions.setHistoryPage} loading={state.historyLoading} />
       </div>
 
       <PreviewDialog

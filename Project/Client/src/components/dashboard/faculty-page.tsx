@@ -18,6 +18,7 @@ import { statusBadgeClass } from "@/lib/badge-styles";
 import { API_ROLE_LABEL, ENTITY_STATUS_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
 import { FacultyDialog } from "@/components/dashboard/faculty-dialog";
+import { PaginationBar } from "@/components/dashboard/pagination-bar";
 import { PencilIcon, PowerIcon, TrashIcon } from "@phosphor-icons/react";
 import type { ApiFaculty } from "@/services";
 
@@ -165,6 +166,7 @@ export function FacultyPage() {
           </TableBody>
         </Table>
         </div>
+        <PaginationBar pagination={state.facultyPagination} onPageChange={actions.setFacultyPage} loading={state.facultyLoading} />
       </div>
 
       <FacultyDialog />

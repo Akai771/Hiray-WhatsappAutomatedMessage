@@ -17,6 +17,7 @@ function mapRow(row: any): NotificationTemplate {
     attachmentAllowed: row.attachment_allowed,
     buttonAllowed: row.button_allowed,
     buttonUrlIsDynamic: row.button_url_is_dynamic ?? false,
+    hasTextHeader: row.has_text_header ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -35,6 +36,7 @@ export async function create(input: CreateTemplateInput): Promise<NotificationTe
       attachment_allowed: input.attachmentAllowed,
       button_allowed: input.buttonAllowed,
       button_url_is_dynamic: input.buttonUrlIsDynamic,
+      has_text_header: input.hasTextHeader,
     })
     .select()
     .single();
@@ -82,6 +84,7 @@ export async function update(id: string, input: UpdateTemplateInput): Promise<No
   if (input.attachmentAllowed !== undefined) patch.attachment_allowed = input.attachmentAllowed;
   if (input.buttonAllowed !== undefined) patch.button_allowed = input.buttonAllowed;
   if (input.buttonUrlIsDynamic !== undefined) patch.button_url_is_dynamic = input.buttonUrlIsDynamic;
+  if (input.hasTextHeader !== undefined) patch.has_text_header = input.hasTextHeader;
 
   const { data, error } = await supabaseAdmin.from(TABLE).update(patch).eq("id", id).select().maybeSingle();
 

@@ -10,7 +10,7 @@ function mapRow(row: any): Notification {
     id: row.id,
     templateId: row.template_id,
     title: row.title,
-    message: row.message,
+    variableValues: row.variable_values ?? null,
     attachmentUrl: row.attachment_url,
     attachmentType: row.attachment_type,
     buttonLabel: row.button_label,
@@ -21,6 +21,9 @@ function mapRow(row: any): Notification {
     targetSemester: row.target_semester,
     audience: row.audience ?? [],
     createdBy: row.created_by,
+    // Only present when the query embeds the faculty relation (findAll,
+    // for the history table's "Sent By" column) — null everywhere else.
+    createdByName: row.faculty?.name ?? null,
     scheduledAt: row.scheduled_at,
     status: row.status,
     createdAt: row.created_at,
@@ -34,7 +37,7 @@ export async function create(input: CreateNotificationInput, status: string): Pr
     .insert({
       template_id: input.templateId,
       title: input.title ?? null,
-      message: input.message ?? null,
+      variable_values: input.variableValues ?? null,
       attachment_url: input.attachmentUrl ?? null,
       attachment_type: input.attachmentType ?? null,
       button_label: input.buttonLabel ?? null,
@@ -66,7 +69,7 @@ export async function findAll(
   limit: number,
   filter: { branchId?: string; status?: string },
 ): Promise<{ items: Notification[]; pagination: Pagination }> {
-  let query = supabaseAdmin.from(TABLE).select("*", { count: "exact" });
+  let query = supabaseAdmin.from(TABLE).select("*, faculty:created_by(name)", { count: "exact" });
   if (filter.branchId) query = query.eq("branch_id", filter.branchId);
   if (filter.status) query = query.eq("status", filter.status);
 

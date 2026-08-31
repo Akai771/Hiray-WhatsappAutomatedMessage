@@ -13,6 +13,7 @@ import { ENTITY_STATUS_LABEL, PARENT_RELATION_LABEL } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
 import { useAuth } from "@/store/auth-store";
 import { ParentDialog } from "@/components/dashboard/parent-dialog";
+import { PaginationBar } from "@/components/dashboard/pagination-bar";
 import { FunnelIcon, PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function ParentsPage() {
@@ -204,6 +205,7 @@ export function ParentsPage() {
           </TableBody>
         </Table>
         </div>
+        <PaginationBar pagination={state.parentsPagination} onPageChange={actions.setParentsPage} loading={state.parentsLoading} />
       </div>
 
       <ParentDialog />

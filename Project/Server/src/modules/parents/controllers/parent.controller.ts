@@ -8,18 +8,20 @@ export async function create(req: Request, res: Response) {
 }
 
 export async function list(req: Request, res: Response) {
-  const { page, limit, branchId, linkedStudentId, status, search } = req.query as unknown as {
+  const { page, limit, branchId, linkedStudentId, status, relation, search } = req.query as unknown as {
     page: number;
     limit: number;
     branchId?: string;
     linkedStudentId?: string;
     status?: string;
+    relation?: string;
     search?: string;
   };
   const { items, pagination } = await parentService.listParents(req.user!, page, limit, {
     branchId,
     linkedStudentId,
     status,
+    relation,
     search,
   });
   return sendPaginated(res, items, pagination);

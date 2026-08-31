@@ -55,6 +55,7 @@ export async function findAll(
 
   if (filter.linkedStudentId) query = query.eq("linked_student_id", filter.linkedStudentId);
   if (filter.status) query = query.eq("status", filter.status);
+  if (filter.relation) query = query.eq("relation", filter.relation);
   if (filter.search) query = query.or(`name.ilike.%${filter.search}%,phone.ilike.%${filter.search}%`);
 
   const from = (page - 1) * limit;

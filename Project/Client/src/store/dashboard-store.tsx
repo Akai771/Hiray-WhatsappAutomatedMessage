@@ -10,19 +10,25 @@ import {
   templateService,
   notificationService,
   uploadService,
+  dashboardService,
   ApiClientError,
 } from "@/services";
 import type {
+  AnalyticsData,
   ApiFaculty,
   ApiNotificationLog,
   ApiNotificationTemplate,
   ApiParent,
   ApiStudent,
   EntityStatus as ApiEntityStatus,
+  NotificationStatus,
+  Pagination,
+  ParentRelation,
   RecipientType,
   StudentStatus as ApiStudentStatus,
   TemplateCategory,
 } from "@/services";
+import { NOTIFICATION_STATUS_LABEL } from "@/lib/types";
 import type {
   Branch,
   Course,
@@ -39,6 +45,12 @@ import type {
 function apiErrorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiClientError ? err.message : fallback;
 }
+
+// Shared page size for every paginated list on the dashboard — was
+// previously "fetch up to 100 rows and show them all", which got slower as
+// each table grew. Fetching one page at a time keeps every load fast
+// regardless of total row count.
+const PAGE_SIZE = 20;
 
 function emptyStudentForm(): StudentForm {
   return {
@@ -81,7 +93,7 @@ function emptyMsgForm(): MessageForm {
     notifType: "",
     templateId: "",
     title: "",
-    message: "",
+    variableValues: [],
     attachment: null,
     ctaLabel: "",
     ctaUrl: "",
@@ -106,6 +118,7 @@ interface NewTemplateForm {
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
   buttonUrlIsDynamic: boolean;
+  hasTextHeader: boolean;
 }
 function emptyNewTemplate(): NewTemplateForm {
   return {
@@ -118,6 +131,7 @@ function emptyNewTemplate(): NewTemplateForm {
     attachmentAllowed: false,
     buttonAllowed: false,
     buttonUrlIsDynamic: false,
+    hasTextHeader: false,
   };
 }
 
@@ -132,12 +146,18 @@ interface AppState {
   studentsLoading: boolean;
   studentsSaving: boolean;
   studentsImporting: boolean;
+  studentsPage: number;
+  studentsPagination: Pagination | null;
   parents: ApiParent[];
   parentsLoading: boolean;
   parentsSaving: boolean;
+  parentsPage: number;
+  parentsPagination: Pagination | null;
   faculty: ApiFaculty[];
   facultyLoading: boolean;
   facultySaving: boolean;
+  facultyPage: number;
+  facultyPagination: Pagination | null;
   facultyFilters: { branchId: string; status: string };
   templates: ApiNotificationTemplate[];
   templatesLoading: boolean;
@@ -145,6 +165,8 @@ interface AppState {
   editingTemplateId: string | null;
   history: HistoryRow[];
   historyLoading: boolean;
+  historyPage: number;
+  historyPagination: Pagination | null;
   sendingNotification: boolean;
   attachmentUploading: boolean;
   selectedStudents: string[];
@@ -174,6 +196,8 @@ interface AppState {
   failureDialogNotificationId: string | null;
   failureDialogLoading: boolean;
   failureDialogLogs: ApiNotificationLog[];
+  analytics: AnalyticsData | null;
+  analyticsLoading: boolean;
 }
 
 function initialState(role: Role): AppState {
@@ -188,12 +212,18 @@ function initialState(role: Role): AppState {
     studentsLoading: true,
     studentsSaving: false,
     studentsImporting: false,
+    studentsPage: 1,
+    studentsPagination: null,
     parents: [],
     parentsLoading: true,
     parentsSaving: false,
+    parentsPage: 1,
+    parentsPagination: null,
     faculty: [],
     facultyLoading: true,
     facultySaving: false,
+    facultyPage: 1,
+    facultyPagination: null,
     facultyFilters: { branchId: "all", status: "all" },
     templates: [],
     templatesLoading: true,
@@ -201,6 +231,8 @@ function initialState(role: Role): AppState {
     editingTemplateId: null,
     history: [],
     historyLoading: true,
+    historyPage: 1,
+    historyPagination: null,
     sendingNotification: false,
     attachmentUploading: false,
     selectedStudents: [],
@@ -230,6 +262,8 @@ function initialState(role: Role): AppState {
     failureDialogNotificationId: null,
     failureDialogLoading: false,
     failureDialogLogs: [],
+    analytics: null,
+    analyticsLoading: true,
   };
 }
 
@@ -264,6 +298,24 @@ function useDashboardState(initialRole: Role) {
     }
   }, []);
   const removeMsgAttachment = useCallback(() => setState((s) => ({ ...s, msgForm: { ...s.msgForm, attachment: null } })), []);
+  const setVariableValue = useCallback((index: number, value: string) => {
+    setState((s) => {
+      const next = [...s.msgForm.variableValues];
+      next[index] = value;
+      return { ...s, msgForm: { ...s.msgForm, variableValues: next } };
+    });
+  }, []);
+  // Resizes variableValues to match the newly-picked template's placeholder
+  // count in the same update as the templateId change — switching templates
+  // always starts their manual values fresh rather than carrying over
+  // mismatched leftovers from the previous template.
+  const selectMsgTemplate = useCallback((templateId: string) => {
+    setState((s) => {
+      const t = s.templates.find((x) => x.id === templateId);
+      const needed = t ? Math.max(0, t.variables.length - (t.autoFillRecipientName ? 1 : 0)) : 0;
+      return { ...s, msgForm: { ...s.msgForm, templateId, variableValues: new Array(needed).fill("") } };
+    });
+  }, []);
   const setScheduleMode = useCallback(
     (mode: MessageForm["scheduleMode"]) => setState((s) => ({ ...s, msgForm: { ...s.msgForm, scheduleMode: mode } })),
     [],
@@ -283,6 +335,21 @@ function useDashboardState(initialRole: Role) {
     }
   }, []);
 
+  const refreshAnalytics = useCallback(async () => {
+    setState((s) => ({ ...s, analyticsLoading: true }));
+    try {
+      const data = await dashboardService.getAnalytics();
+      setState((s) => ({ ...s, analytics: data, analyticsLoading: false }));
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to load analytics."));
+      setState((s) => ({ ...s, analyticsLoading: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshAnalytics();
+  }, [refreshAnalytics]);
+
   useEffect(() => {
     refreshTemplates();
   }, [refreshTemplates]);
@@ -290,34 +357,62 @@ function useDashboardState(initialRole: Role) {
   const refreshHistory = useCallback(async () => {
     setState((s) => ({ ...s, historyLoading: true }));
     try {
-      const { data: notifications } = await notificationService.listNotifications(1, 50);
-      const rows = await Promise.all(
-        notifications.map(async (n): Promise<HistoryRow> => {
-          const template = state.templates.find((t) => t.id === n.templateId);
-          const report = await notificationService.getDeliveryReport(n.id).catch(() => null);
-          const audienceLabels = n.audience
-            .map((a) => (a === "STUDENT" ? "Students" : "Parents"))
-            .join(", ");
-          return {
-            id: n.id,
-            date: new Date(n.createdAt).toLocaleString(),
-            title: n.title || template?.name || "(untitled)",
-            type: template?.category ?? "—",
-            audience: audienceLabels || "—",
-            recipients: report?.total ?? 0,
-            status: n.status,
-            delivered: report?.delivered ?? 0,
-            read: report?.read ?? 0,
-            failed: report?.failed ?? 0,
-          };
-        }),
+      // Status filter now goes to the server (it already supported it —
+      // just wasn't being used) so it composes correctly with pagination;
+      // filtering only the current page client-side would silently hide
+      // matches sitting on other pages.
+      const statusKey = state.historyFilter === "All"
+        ? undefined
+        : (Object.entries(NOTIFICATION_STATUS_LABEL).find(([, label]) => label === state.historyFilter)?.[0] as
+            | NotificationStatus
+            | undefined);
+      // listNotifications now returns each row's delivery report already
+      // computed server-side (one batched query) — no more per-row
+      // getDeliveryReport call, which used to fire up to 50 separate
+      // requests (one per history row) and was what made this page slow.
+      const { data: notifications, pagination } = await notificationService.listNotifications(
+        state.historyPage,
+        PAGE_SIZE,
+        undefined,
+        statusKey,
       );
-      setState((s) => ({ ...s, history: rows, historyLoading: false }));
+      const rows: HistoryRow[] = notifications.map((n) => {
+        const template = state.templates.find((t) => t.id === n.templateId);
+        const report = n.deliveryReport;
+        const audienceLabels = n.audience
+          .map((a) => (a === "STUDENT" ? "Students" : "Parents"))
+          .join(", ");
+        const branch = n.branchId ? state.branches.find((b) => b.id === n.branchId) : undefined;
+        const course = n.courseId ? state.courses.find((c) => c.id === n.courseId) : undefined;
+        const scopeLabel = [
+          n.branchId ? (branch?.name ?? "Unknown Branch") : "All Branches",
+          n.courseId ? (course?.name ?? "Unknown Course") : undefined,
+          n.targetYear ? `Year ${n.targetYear}` : undefined,
+          n.targetSemester ? `Sem ${n.targetSemester}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        return {
+          id: n.id,
+          date: new Date(n.createdAt).toLocaleString(),
+          title: n.title || template?.name || "(untitled)",
+          type: template?.category ?? "—",
+          sentBy: n.createdByName || "—",
+          audience: audienceLabels || "—",
+          scopeLabel,
+          recipients: report?.total ?? 0,
+          status: n.status,
+          delivered: report?.delivered ?? 0,
+          read: report?.read ?? 0,
+          failed: report?.failed ?? 0,
+        };
+      });
+      setState((s) => ({ ...s, history: rows, historyPagination: pagination, historyLoading: false }));
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to load message history."));
       setState((s) => ({ ...s, historyLoading: false }));
     }
-  }, [state.templates]);
+  }, [state.templates, state.branches, state.courses, state.historyPage, state.historyFilter]);
 
   useEffect(() => {
     refreshHistory();
@@ -330,8 +425,17 @@ function useDashboardState(initialRole: Role) {
       return;
     }
     const template = state.templates.find((t) => t.id === f.templateId);
-    if (template && template.variables.length > 0 && !template.autoFillRecipientName && !f.message.trim()) {
-      toast.error("This template has a placeholder to fill — enter a message.");
+    // autoFillRecipientName always claims {{1}} — every other placeholder
+    // needs a value typed in here, in order.
+    const neededValues = template ? Math.max(0, template.variables.length - (template.autoFillRecipientName ? 1 : 0)) : 0;
+    if (neededValues > 0 && f.variableValues.slice(0, neededValues).some((v) => !v.trim())) {
+      toast.error(`This template has ${neededValues} placeholder${neededValues === 1 ? "" : "s"} to fill in.`);
+      return;
+    }
+    // Template's media header (image/video/document) is fixed at approval —
+    // WhatsApp requires that component on every send, it's not optional.
+    if (template?.attachmentAllowed && !f.attachment?.url) {
+      toast.error("This template requires an attachment — upload an image, video, or document.");
       return;
     }
     if (!f.audience.students && !f.audience.parents) {
@@ -353,7 +457,7 @@ function useDashboardState(initialRole: Role) {
       await notificationService.createNotification({
         templateId: f.templateId,
         title: f.title.trim() || undefined,
-        message: template && template.variables.length > 0 && !template.autoFillRecipientName ? f.message.trim() : undefined,
+        variableValues: neededValues > 0 ? f.variableValues.slice(0, neededValues).map((v) => v.trim()) : undefined,
         attachmentUrl: template?.attachmentAllowed ? f.attachment?.url : undefined,
         attachmentType: template?.attachmentAllowed ? f.attachment?.mimeType : undefined,
         buttonLabel: template?.buttonAllowed ? f.ctaLabel || undefined : undefined,
@@ -378,6 +482,7 @@ function useDashboardState(initialRole: Role) {
     (key: keyof AppState["studentFilters"], val: string) =>
       setState((s) => ({
         ...s,
+        studentsPage: 1,
         studentFilters:
           key === "branchId"
             ? { ...s.studentFilters, branchId: val, courseId: "all" }
@@ -385,7 +490,8 @@ function useDashboardState(initialRole: Role) {
       })),
     [],
   );
-  const setStudentSearch = useCallback((v: string) => setState((s) => ({ ...s, studentSearch: v })), []);
+  const setStudentSearch = useCallback((v: string) => setState((s) => ({ ...s, studentSearch: v, studentsPage: 1 })), []);
+  const setStudentsPage = useCallback((page: number) => setState((s) => ({ ...s, studentsPage: page })), []);
   const toggleStudentSelect = useCallback(
     (id: string) =>
       setState((s) => ({
@@ -450,13 +556,13 @@ function useDashboardState(initialRole: Role) {
   const refreshStudents = useCallback(async () => {
     setState((s) => ({ ...s, studentsLoading: true }));
     try {
-      const { data } = await studentsService.listStudents(1, 100, buildStudentListQuery());
-      setState((s) => ({ ...s, students: data, studentsLoading: false }));
+      const { data, pagination } = await studentsService.listStudents(state.studentsPage, PAGE_SIZE, buildStudentListQuery());
+      setState((s) => ({ ...s, students: data, studentsPagination: pagination, studentsLoading: false }));
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to load students."));
       setState((s) => ({ ...s, studentsLoading: false }));
     }
-  }, [buildStudentListQuery]);
+  }, [buildStudentListQuery, state.studentsPage]);
 
   useEffect(() => {
     const handle = setTimeout(refreshStudents, 300);
@@ -536,27 +642,28 @@ function useDashboardState(initialRole: Role) {
   const deleteStudent = useCallback(async (id: string) => {
     try {
       await studentsService.deleteStudent(id);
-      setState((s) => ({
-        ...s,
-        students: s.students.filter((x) => x.id !== id),
-        selectedStudents: s.selectedStudents.filter((x) => x !== id),
-      }));
+      setState((s) => ({ ...s, selectedStudents: s.selectedStudents.filter((x) => x !== id) }));
+      // Re-fetch rather than splice locally — with server-side pagination,
+      // a local splice would leave the "Showing X of Y" total stale and
+      // wouldn't backfill this page from the next one.
+      await refreshStudents();
       toast.success("Student deleted.");
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to delete student."));
     }
-  }, []);
+  }, [refreshStudents]);
   const bulkDeleteStudents = useCallback(async () => {
     const ids = state.selectedStudents;
     if (ids.length === 0) return;
     try {
       await studentsService.bulkDeleteStudents(ids);
-      setState((s) => ({ ...s, students: s.students.filter((x) => !ids.includes(x.id)), selectedStudents: [] }));
+      setState((s) => ({ ...s, selectedStudents: [] }));
+      await refreshStudents();
       toast.success("Selected students removed.");
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to delete students."));
     }
-  }, [state.selectedStudents]);
+  }, [state.selectedStudents, refreshStudents]);
   const messageSelectedStudents = useCallback(() => {
     setState((s) => ({ ...s, activeTab: "messages", msgForm: { ...s.msgForm, audience: { ...s.msgForm.audience, students: true } } }));
     toast.success("Composing message to selected students.");
@@ -587,10 +694,12 @@ function useDashboardState(initialRole: Role) {
   );
 
   const setParentFilter = useCallback(
-    (key: keyof AppState["parentFilters"], val: string) => setState((s) => ({ ...s, parentFilters: { ...s.parentFilters, [key]: val } })),
+    (key: keyof AppState["parentFilters"], val: string) =>
+      setState((s) => ({ ...s, parentsPage: 1, parentFilters: { ...s.parentFilters, [key]: val } })),
     [],
   );
-  const setParentSearch = useCallback((v: string) => setState((s) => ({ ...s, parentSearch: v })), []);
+  const setParentSearch = useCallback((v: string) => setState((s) => ({ ...s, parentSearch: v, parentsPage: 1 })), []);
+  const setParentsPage = useCallback((page: number) => setState((s) => ({ ...s, parentsPage: page })), []);
   const toggleParentSelect = useCallback(
     (id: string) =>
       setState((s) => ({
@@ -639,6 +748,10 @@ function useDashboardState(initialRole: Role) {
     return {
       branchId: pf.branchId === "all" ? undefined : pf.branchId,
       status: pf.status === "all" ? undefined : (pf.status as ApiEntityStatus),
+      // Was filtered client-side after fetching 100 rows, which silently
+      // broke once pagination limited each fetch to a single page — now
+      // filtered server-side like every other filter here.
+      relation: pf.relation === "all" ? undefined : (pf.relation as ParentRelation),
       search: state.parentSearch.trim() || undefined,
     };
   }, [state.parentFilters, state.parentSearch]);
@@ -646,15 +759,13 @@ function useDashboardState(initialRole: Role) {
   const refreshParents = useCallback(async () => {
     setState((s) => ({ ...s, parentsLoading: true }));
     try {
-      const { data } = await parentsService.listParents(1, 100, buildParentListQuery());
-      const relation = state.parentFilters.relation;
-      const filtered = relation === "all" ? data : data.filter((p) => p.relation === relation);
-      setState((s) => ({ ...s, parents: filtered, parentsLoading: false }));
+      const { data, pagination } = await parentsService.listParents(state.parentsPage, PAGE_SIZE, buildParentListQuery());
+      setState((s) => ({ ...s, parents: data, parentsPagination: pagination, parentsLoading: false }));
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to load parents."));
       setState((s) => ({ ...s, parentsLoading: false }));
     }
-  }, [buildParentListQuery, state.parentFilters.relation]);
+  }, [buildParentListQuery, state.parentsPage]);
 
   useEffect(() => {
     const handle = setTimeout(refreshParents, 300);
@@ -717,27 +828,25 @@ function useDashboardState(initialRole: Role) {
   const deleteParent = useCallback(async (id: string) => {
     try {
       await parentsService.deleteParent(id);
-      setState((s) => ({
-        ...s,
-        parents: s.parents.filter((x) => x.id !== id),
-        selectedParents: s.selectedParents.filter((x) => x !== id),
-      }));
+      setState((s) => ({ ...s, selectedParents: s.selectedParents.filter((x) => x !== id) }));
+      await refreshParents();
       toast.success("Parent deleted.");
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to delete parent."));
     }
-  }, []);
+  }, [refreshParents]);
   const bulkDeleteParents = useCallback(async () => {
     const ids = state.selectedParents;
     if (ids.length === 0) return;
     try {
       await parentsService.bulkDeleteParents(ids);
-      setState((s) => ({ ...s, parents: s.parents.filter((x) => !ids.includes(x.id)), selectedParents: [] }));
+      setState((s) => ({ ...s, selectedParents: [] }));
+      await refreshParents();
       toast.success("Selected parents removed.");
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to delete parents."));
     }
-  }, [state.selectedParents]);
+  }, [state.selectedParents, refreshParents]);
   const messageSelectedParents = useCallback(() => {
     setState((s) => ({ ...s, activeTab: "messages", msgForm: { ...s.msgForm, audience: { ...s.msgForm.audience, parents: true } } }));
     toast.success("Composing message to selected parents.");
@@ -758,22 +867,24 @@ function useDashboardState(initialRole: Role) {
     setState((s) => ({ ...s, facultyLoading: true }));
     try {
       const q = buildFacultyListQuery();
-      const { data } = await facultyService.listFaculty(1, 100, q.branchId, q.status);
-      setState((s) => ({ ...s, faculty: data, facultyLoading: false }));
+      const { data, pagination } = await facultyService.listFaculty(state.facultyPage, PAGE_SIZE, q.branchId, q.status);
+      setState((s) => ({ ...s, faculty: data, facultyPagination: pagination, facultyLoading: false }));
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to load faculty."));
       setState((s) => ({ ...s, facultyLoading: false }));
     }
-  }, [buildFacultyListQuery]);
+  }, [buildFacultyListQuery, state.facultyPage]);
 
   useEffect(() => {
     refreshFaculty();
   }, [refreshFaculty]);
 
   const setFacultyFilter = useCallback(
-    (key: keyof AppState["facultyFilters"], val: string) => setState((s) => ({ ...s, facultyFilters: { ...s.facultyFilters, [key]: val } })),
+    (key: keyof AppState["facultyFilters"], val: string) =>
+      setState((s) => ({ ...s, facultyPage: 1, facultyFilters: { ...s.facultyFilters, [key]: val } })),
     [],
   );
+  const setFacultyPage = useCallback((page: number) => setState((s) => ({ ...s, facultyPage: page })), []);
 
   const openAddFaculty = useCallback(() => {
     setState((s) => {
@@ -895,13 +1006,13 @@ function useDashboardState(initialRole: Role) {
       }
       try {
         await facultyService.deleteFaculty(id);
-        setState((s) => ({ ...s, faculty: s.faculty.filter((x) => x.id !== id) }));
+        await refreshFaculty();
         toast.success("Faculty account deleted.");
       } catch (err) {
         toast.error(apiErrorMessage(err, "Failed to delete faculty account."));
       }
     },
-    [state.role],
+    [state.role, refreshFaculty],
   );
 
   const refreshBranches = useCallback(async () => {
@@ -1054,6 +1165,7 @@ function useDashboardState(initialRole: Role) {
       attachmentAllowed: t.attachmentAllowed,
       buttonAllowed: t.buttonAllowed,
       buttonUrlIsDynamic: t.buttonUrlIsDynamic,
+      hasTextHeader: t.hasTextHeader,
     };
     try {
       if (state.editingTemplateId) {
@@ -1088,6 +1200,7 @@ function useDashboardState(initialRole: Role) {
         attachmentAllowed: t.attachmentAllowed,
         buttonAllowed: t.buttonAllowed,
         buttonUrlIsDynamic: t.buttonUrlIsDynamic,
+        hasTextHeader: t.hasTextHeader,
       },
     }));
   }, []);
@@ -1109,8 +1222,9 @@ function useDashboardState(initialRole: Role) {
     }
   }, []);
 
-  const setHistoryFilter = useCallback((v: string) => setState((s) => ({ ...s, historyFilter: v })), []);
+  const setHistoryFilter = useCallback((v: string) => setState((s) => ({ ...s, historyFilter: v, historyPage: 1 })), []);
   const setHistorySearch = useCallback((v: string) => setState((s) => ({ ...s, historySearch: v })), []);
+  const setHistoryPage = useCallback((page: number) => setState((s) => ({ ...s, historyPage: page })), []);
 
   const viewFailedLogs = useCallback(async (notificationId: string) => {
     setState((s) => ({ ...s, failureDialogNotificationId: notificationId, failureDialogLoading: true, failureDialogLogs: [] }));
@@ -1135,6 +1249,8 @@ function useDashboardState(initialRole: Role) {
       setTab,
       setRole,
       setMsgField,
+      setVariableValue,
+      selectMsgTemplate,
       toggleAudience,
       uploadMsgAttachment,
       removeMsgAttachment,
@@ -1145,6 +1261,7 @@ function useDashboardState(initialRole: Role) {
       sendNotification,
       setStudentFilter,
       setStudentSearch,
+      setStudentsPage,
       toggleStudentSelect,
       toggleSelectAllStudents,
       openAddStudent,
@@ -1160,6 +1277,7 @@ function useDashboardState(initialRole: Role) {
       importStudents,
       setParentFilter,
       setParentSearch,
+      setParentsPage,
       toggleParentSelect,
       toggleSelectAllParents,
       openAddParent,
@@ -1172,6 +1290,7 @@ function useDashboardState(initialRole: Role) {
       messageSelectedParents,
       openImportParents,
       setFacultyFilter,
+      setFacultyPage,
       openAddFaculty,
       openEditFaculty,
       closeAddFaculty,
@@ -1198,21 +1317,23 @@ function useDashboardState(initialRole: Role) {
       deleteTemplate,
       setHistoryFilter,
       setHistorySearch,
+      setHistoryPage,
       refreshHistory,
       viewFailedLogs,
       closeFailedLogs,
+      refreshAnalytics,
     }),
     [
-      setTab, setRole, setMsgField, toggleAudience, uploadMsgAttachment, removeMsgAttachment, setScheduleMode, resetMsgForm, openPreview, closePreview,
-      sendNotification, setStudentFilter, setStudentSearch, toggleStudentSelect, toggleSelectAllStudents, openAddStudent,
+      setTab, setRole, setMsgField, setVariableValue, selectMsgTemplate, toggleAudience, uploadMsgAttachment, removeMsgAttachment, setScheduleMode, resetMsgForm, openPreview, closePreview,
+      sendNotification, setStudentFilter, setStudentSearch, setStudentsPage, toggleStudentSelect, toggleSelectAllStudents, openAddStudent,
       openEditStudent, closeAddStudent, setStudentFormField, saveStudent, deleteStudent, bulkDeleteStudents, messageSelectedStudents,
-      openImportStudents, closeImportStudents, importStudents, setParentFilter, setParentSearch, toggleParentSelect,
+      openImportStudents, closeImportStudents, importStudents, setParentFilter, setParentSearch, setParentsPage, toggleParentSelect,
       toggleSelectAllParents, openAddParent, openEditParent, closeAddParent, setParentFormField, saveParent, deleteParent,
-      bulkDeleteParents, messageSelectedParents, openImportParents, setFacultyFilter, openAddFaculty, openEditFaculty,
+      bulkDeleteParents, messageSelectedParents, openImportParents, setFacultyFilter, setFacultyPage, openAddFaculty, openEditFaculty,
       closeAddFaculty, setFacultyFormField, regenerateFacultyPassword, saveFaculty, toggleFacultyStatus, resetFacultyPassword, deleteFaculty, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
       setSelectedBranchForCourses, setNewCourseField, addCourse, deleteCourse, updateCourseYears, updateCourseSemesters,
-      setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch, refreshHistory,
-      viewFailedLogs, closeFailedLogs,
+      setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch, setHistoryPage, refreshHistory,
+      viewFailedLogs, closeFailedLogs, refreshAnalytics,
     ],
   );
 

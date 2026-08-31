@@ -59,7 +59,10 @@ export interface HistoryRow {
   date: string;
   title: string;
   type: NotifType | "—";
+  sentBy: string;
   audience: string;
+  /** Branch · Course · Year · Semester this send was scoped to, e.g. "Hiray College · Computer Engg · Year 2 · Sem 3". "All Branches" when unscoped. */
+  scopeLabel: string;
   recipients: number;
   status: NotificationStatus;
   delivered: number;
@@ -77,7 +80,13 @@ export interface MessageForm {
   notifType: NotifType | "";
   templateId: string;
   title: string;
-  message: string;
+  /**
+   * Values for the selected template's non-auto-filled placeholders, in
+   * {{n}} order (excluding the auto-filled recipient-name slot, if any).
+   * Length is kept in sync with the template's variable count whenever the
+   * template selection changes.
+   */
+  variableValues: string[];
   attachment: AttachmentValue | null;
   ctaLabel: string;
   ctaUrl: string;
@@ -122,5 +131,5 @@ export interface FacultyForm {
   role: "SUPER_ADMIN" | "FACULTY";
 }
 
-export type Tab = "messages" | "students" | "parents" | "faculty" | "settings";
+export type Tab = "messages" | "students" | "parents" | "faculty" | "analytics" | "settings";
 export type SettingsTab = "branches" | "courses" | "years" | "templates";

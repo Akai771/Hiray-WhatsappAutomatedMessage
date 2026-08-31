@@ -103,6 +103,7 @@ export interface ApiNotificationTemplate {
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
   buttonUrlIsDynamic: boolean;
+  hasTextHeader: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -111,7 +112,7 @@ export interface ApiNotification {
   id: string;
   templateId: string;
   title: string | null;
-  message: string | null;
+  variableValues: string[] | null;
   attachmentUrl: string | null;
   attachmentType: string | null;
   buttonLabel: string | null;
@@ -122,10 +123,14 @@ export interface ApiNotification {
   targetSemester: number | null;
   audience: RecipientType[];
   createdBy: string;
+  createdByName: string | null;
   scheduledAt: string | null;
   status: NotificationStatus;
   createdAt: string;
   updatedAt: string;
+  // Only populated by listNotifications (bulk-fetched alongside the page) —
+  // undefined on notifications fetched any other way.
+  deliveryReport?: DeliveryReport;
 }
 
 export interface ApiNotificationLog {
@@ -160,6 +165,42 @@ export interface DashboardStats {
   deliveredMessages: number;
   failedMessages: number;
   pendingMessages: number;
+}
+
+export interface SenderStat {
+  senderId: string;
+  name: string;
+  count: number;
+}
+
+export interface TemplateStat {
+  templateId: string;
+  name: string;
+  whatsappTemplateName: string;
+  count: number;
+}
+
+export interface ScopeStat {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export interface AnalyticsData {
+  totalNotifications: number;
+  totalRecipients: number;
+  delivered: number;
+  read: number;
+  failed: number;
+  pending: number;
+  sent: number;
+  topSenders: SenderStat[];
+  topTemplates: TemplateStat[];
+  categoryCounts: Record<string, number>;
+  statusCounts: Record<string, number>;
+  roleCounts: Record<string, number>;
+  topBranches: ScopeStat[];
+  topCourses: ScopeStat[];
 }
 
 export interface ApiStudent {

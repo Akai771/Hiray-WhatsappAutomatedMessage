@@ -15,6 +15,7 @@ import { useDashboard } from "@/store/dashboard-store";
 import { useAuth } from "@/store/auth-store";
 import { StudentDialog } from "@/components/dashboard/student-dialog";
 import { ImportDialog } from "@/components/dashboard/import-dialog";
+import { PaginationBar } from "@/components/dashboard/pagination-bar";
 import { FunnelIcon, PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function StudentsPage() {
@@ -270,6 +271,7 @@ export function StudentsPage() {
           </TableBody>
         </Table>
         </div>
+        <PaginationBar pagination={state.studentsPagination} onPageChange={actions.setStudentsPage} loading={state.studentsLoading} />
       </div>
 
       <StudentDialog />

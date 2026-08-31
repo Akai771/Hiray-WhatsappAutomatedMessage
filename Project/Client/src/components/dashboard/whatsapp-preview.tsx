@@ -58,7 +58,7 @@ export function WhatsappPreview({
               </div>
             )
           )}
-          <div className="mb-0.5 text-[13.5px] font-bold text-white">{title}</div>
+          {title && <div className="mb-0.5 text-[13.5px] font-bold text-white">{title}</div>}
           <div className="text-[13px] leading-snug whitespace-pre-wrap text-white">{body}</div>
           <div className="text-right text-[11px] text-[#85a0a8]">
            00:00

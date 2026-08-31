@@ -20,6 +20,11 @@ export interface NotificationTemplate {
   // has one fixed URL baked in — WhatsApp rejects any button parameter sent
   // with it. true = the approved URL ends in {{1}}, a suffix filled per-send.
   buttonUrlIsDynamic: boolean;
+  // Whether the approved template has a TEXT header component. The Send
+  // page's "Title" field is always an internal label (never sent to
+  // WhatsApp) — this only controls whether the live preview shows it as a
+  // header, matching whether the real message will.
+  hasTextHeader: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +39,7 @@ export interface CreateTemplateInput {
   attachmentAllowed: boolean;
   buttonAllowed: boolean;
   buttonUrlIsDynamic: boolean;
+  hasTextHeader: boolean;
 }
 
 export interface UpdateTemplateInput {
@@ -46,4 +52,5 @@ export interface UpdateTemplateInput {
   attachmentAllowed?: boolean;
   buttonAllowed?: boolean;
   buttonUrlIsDynamic?: boolean;
+  hasTextHeader?: boolean;
 }
