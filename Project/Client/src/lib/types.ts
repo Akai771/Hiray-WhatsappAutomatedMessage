@@ -128,6 +128,7 @@ export interface FacultyForm {
   email: string;
   password: string;
   branchId: string;
+  courseId: string;
   role: "SUPER_ADMIN" | "FACULTY";
 }
 

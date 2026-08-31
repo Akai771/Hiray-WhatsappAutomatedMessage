@@ -77,7 +77,7 @@ function HorizontalBarChart({ data, dataKey, nameKey }: { data: Record<string, u
         <YAxis
           type="category"
           dataKey={nameKey}
-          width={120}
+          width={150}
           tick={axisTick}
           axisLine={{ stroke: "var(--border)" }}
           tickLine={false}
@@ -136,10 +136,17 @@ export function AnalyticsPage() {
       ].filter((d) => d.value > 0)
     : [];
 
-  const senderRows: (SenderStat & { name: string })[] = a?.topSenders ?? [];
+  // Sender's own course folded into the display name — a bar chart's Y-axis
+  // only has room for one label per row, and "who" + "which course" is
+  // exactly the pairing this view exists to answer.
+  const senderRows = (a?.topSenders ?? []).map((s: SenderStat) => ({
+    ...s,
+    displayName: s.courseName ? `${s.name} · ${s.courseName}` : s.name,
+  }));
   const templateRows: (TemplateStat & { name: string })[] = a?.topTemplates ?? [];
   const branchRows: ScopeStat[] = a?.topBranches ?? [];
   const courseRows: ScopeStat[] = a?.topCourses ?? [];
+  const senderCourseRows: ScopeStat[] = a?.topSenderCourses ?? [];
 
   return (
     <div className="mx-auto max-w-400 px-4 py-7 sm:px-8">
@@ -221,8 +228,8 @@ export function AnalyticsPage() {
 
           {/* Senders + templates */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <ChartCard title="Top Senders" description="Faculty & admins by notifications sent" empty={senderRows.length === 0}>
-              <HorizontalBarChart data={senderRows} dataKey="count" nameKey="name" />
+            <ChartCard title="Top Senders" description="Faculty & admins by notifications sent (with their course, if any)" empty={senderRows.length === 0}>
+              <HorizontalBarChart data={senderRows} dataKey="count" nameKey="displayName" />
             </ChartCard>
             <ChartCard title="Most-Used Templates" description="Approved templates by times sent" empty={templateRows.length === 0}>
               <HorizontalBarChart data={templateRows} dataKey="count" nameKey="name" />
@@ -242,6 +249,15 @@ export function AnalyticsPage() {
               <HorizontalBarChart data={courseRows} dataKey="count" nameKey="name" />
             </ChartCard>
           </div>
+
+          {/* Faculty activity by their own course */}
+          <ChartCard
+            title="Faculty Activity by Course"
+            description="Notifications sent, grouped by the sender's own course — not who they messaged. Shows which courses' faculty actually use the app, and how much."
+            empty={senderCourseRows.length === 0}
+          >
+            <HorizontalBarChart data={senderCourseRows} dataKey="count" nameKey="name" />
+          </ChartCard>
         </div>
       )}
     </div>

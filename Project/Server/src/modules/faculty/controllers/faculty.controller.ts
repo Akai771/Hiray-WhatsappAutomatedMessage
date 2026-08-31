@@ -8,13 +8,14 @@ export async function create(req: Request, res: Response) {
 }
 
 export async function list(req: Request, res: Response) {
-  const { page, limit, branchId, status } = req.query as unknown as {
+  const { page, limit, branchId, status, courseId } = req.query as unknown as {
     page: number;
     limit: number;
     branchId?: string;
     status?: string;
+    courseId?: string;
   };
-  const { items, pagination } = await facultyService.listFaculty(page, limit, branchId, status);
+  const { items, pagination } = await facultyService.listFaculty(page, limit, branchId, status, courseId);
   return sendPaginated(res, items, pagination);
 }
 

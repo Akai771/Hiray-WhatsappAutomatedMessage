@@ -6,11 +6,13 @@ export interface CreateFacultyInput {
   email: string;
   password: string;
   branchId: string;
+  courseId?: string;
 }
 
 export interface UpdateFacultyInput {
   name?: string;
   branchId?: string;
+  courseId?: string | null;
   role?: ApiRole;
 }
 
@@ -19,8 +21,9 @@ export function listFaculty(
   limit = 20,
   branchId?: string,
   status?: EntityStatus,
+  courseId?: string,
 ): Promise<PaginatedEnvelope<ApiFaculty>> {
-  return apiGetPaginated<ApiFaculty>("/faculty", { page, limit, branchId, status });
+  return apiGetPaginated<ApiFaculty>("/faculty", { page, limit, branchId, status, courseId });
 }
 
 export async function getFaculty(id: string): Promise<ApiFaculty> {

@@ -15,6 +15,10 @@ export function FacultyDialog() {
   const isEditing = !!state.editingFacultyId;
 
   const branchItems = useMemo(() => Object.fromEntries(state.branches.map((b) => [b.id, b.name])), [state.branches]);
+  const coursesForBranch = useMemo(
+    () => state.courses.filter((c) => c.branchId === f.branchId),
+    [state.courses, f.branchId],
+  );
 
   const [resetOpen, setResetOpen] = useState(false);
   const [resetCandidate, setResetCandidate] = useState("");
@@ -79,7 +83,14 @@ export function FacultyDialog() {
           )}
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">College {f.role === "FACULTY" ? "*" : "(optional for Super Admin)"}</Label>
-            <Select value={f.branchId} items={branchItems} onValueChange={(v) => actions.setFacultyFormField("branchId", v ?? "")}>
+            <Select
+              value={f.branchId}
+              items={branchItems}
+              onValueChange={(v) => {
+                actions.setFacultyFormField("branchId", v ?? "");
+                actions.setFacultyFormField("courseId", "");
+              }}
+            >
               <SelectTrigger className="h-9.5 w-full text-[13.5px]">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
@@ -92,6 +103,27 @@ export function FacultyDialog() {
               </SelectContent>
             </Select>
           </div>
+          {f.branchId && (
+            <div>
+              <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Course (optional)</Label>
+              <Select
+                value={f.courseId}
+                items={Object.fromEntries(coursesForBranch.map((c) => [c.id, c.name]))}
+                onValueChange={(v) => actions.setFacultyFormField("courseId", v ?? "")}
+              >
+                <SelectTrigger className="h-9.5 w-full text-[13.5px]">
+                  <SelectValue placeholder={coursesForBranch.length ? "Not course-specific" : "No courses for this branch yet"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {coursesForBranch.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {isEditing && (
             <div>
               <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Role</Label>

@@ -13,6 +13,7 @@ function mapRow(row: any): Faculty {
     email: row.email,
     role: row.role,
     branchId: row.branch_id,
+    courseId: row.course_id,
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -24,6 +25,7 @@ export async function createFacultyRow(input: {
   name: string;
   email: string;
   branchId: string;
+  courseId?: string;
 }): Promise<Faculty> {
   const { data, error } = await supabaseAdmin
     .from(TABLE)
@@ -33,6 +35,7 @@ export async function createFacultyRow(input: {
       email: input.email,
       role: ROLES.FACULTY,
       branch_id: input.branchId,
+      course_id: input.courseId ?? null,
     })
     .select()
     .single();
@@ -51,6 +54,7 @@ export async function findAll(
 ): Promise<{ items: Faculty[]; pagination: Pagination }> {
   let query = supabaseAdmin.from(TABLE).select("*", { count: "exact" });
   if (filter.branchId) query = query.eq("branch_id", filter.branchId);
+  if (filter.courseId) query = query.eq("course_id", filter.courseId);
   if (filter.status) query = query.eq("status", filter.status);
 
   const from = (page - 1) * limit;
@@ -74,6 +78,7 @@ export async function update(id: string, input: UpdateFacultyInput): Promise<Fac
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.branchId !== undefined) patch.branch_id = input.branchId;
+  if (input.courseId !== undefined) patch.course_id = input.courseId;
   if (input.role !== undefined) patch.role = input.role;
 
   const { data, error } = await supabaseAdmin.from(TABLE).update(patch).eq("id", id).select().maybeSingle();

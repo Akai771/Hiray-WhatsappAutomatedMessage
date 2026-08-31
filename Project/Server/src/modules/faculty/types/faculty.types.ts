@@ -6,6 +6,7 @@ export interface Faculty {
   email: string;
   role: Role;
   branchId: string | null;
+  courseId: string | null;
   status: EntityStatus;
   createdAt: string;
   updatedAt: string;
@@ -16,15 +17,18 @@ export interface CreateFacultyInput {
   email: string;
   password: string;
   branchId: string;
+  courseId?: string;
 }
 
 export interface UpdateFacultyInput {
   name?: string;
   branchId?: string;
+  courseId?: string | null;
   role?: Role;
 }
 
 export interface ListFacultyFilter {
   branchId?: string;
+  courseId?: string;
   status?: string;
 }

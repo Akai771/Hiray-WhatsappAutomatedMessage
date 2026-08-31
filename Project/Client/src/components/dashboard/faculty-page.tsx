@@ -37,12 +37,22 @@ export function FacultyPage() {
   }
 
   const branchMap = useMemo(() => Object.fromEntries(state.branches.map((b) => [b.id, b.name])), [state.branches]);
+  const courseMap = useMemo(() => Object.fromEntries(state.courses.map((c) => [c.id, c.name])), [state.courses]);
 
   const branchFilterItems = useMemo(() => {
     const m: Record<string, string> = { all: "All Colleges" };
     state.branches.forEach((b) => (m[b.id] = b.name));
     return m;
   }, [state.branches]);
+  const coursesForFilter = useMemo(
+    () => (state.facultyFilters.branchId === "all" ? state.courses : state.courses.filter((c) => c.branchId === state.facultyFilters.branchId)),
+    [state.courses, state.facultyFilters.branchId],
+  );
+  const courseFilterItems = useMemo(() => {
+    const m: Record<string, string> = { all: "All Courses" };
+    coursesForFilter.forEach((c) => (m[c.id] = c.name));
+    return m;
+  }, [coursesForFilter]);
   const statusFilterItems = useMemo(() => ({ all: "All Status", ...ENTITY_STATUS_LABEL }), []);
 
   return (
@@ -84,6 +94,23 @@ export function FacultyPage() {
           </SelectContent>
         </Select>
         <Select
+          value={state.facultyFilters.courseId}
+          items={courseFilterItems}
+          onValueChange={(v) => actions.setFacultyFilter("courseId", v ?? "all")}
+        >
+          <SelectTrigger className="h-8.5 w-full text-[12.5px] sm:w-fit">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Courses</SelectItem>
+            {coursesForFilter.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           value={state.facultyFilters.status}
           items={statusFilterItems}
           onValueChange={(v) => actions.setFacultyFilter("status", v ?? "all")}
@@ -110,6 +137,7 @@ export function FacultyPage() {
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Name</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Email</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">College</TableHead>
+              <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Course</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Role</TableHead>
               <TableHead className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Status</TableHead>
               <TableHead />
@@ -118,14 +146,14 @@ export function FacultyPage() {
           <TableBody>
             {state.facultyLoading && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-[13px] text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-[13px] text-muted-foreground">
                   Loading faculty…
                 </TableCell>
               </TableRow>
             )}
             {!state.facultyLoading && state.faculty.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-[13px] text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-[13px] text-muted-foreground">
                   No faculty accounts yet.
                 </TableCell>
               </TableRow>
@@ -136,6 +164,7 @@ export function FacultyPage() {
                   <TableCell className="text-[13px] font-semibold">{fac.name}</TableCell>
                   <TableCell className="text-[13px]">{fac.email}</TableCell>
                   <TableCell className="text-[13px]">{fac.branchId ? (branchMap[fac.branchId] ?? "—") : "—"}</TableCell>
+                  <TableCell className="text-[13px]">{fac.courseId ? (courseMap[fac.courseId] ?? "—") : "—"}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className={statusBadgeClass(API_ROLE_LABEL[fac.role])}>
                       {API_ROLE_LABEL[fac.role]}

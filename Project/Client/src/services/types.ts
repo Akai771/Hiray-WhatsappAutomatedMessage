@@ -87,6 +87,7 @@ export interface ApiFaculty {
   email: string;
   role: ApiRole;
   branchId: string | null;
+  courseId: string | null;
   status: EntityStatus;
   createdAt: string;
   updatedAt: string;
@@ -170,6 +171,7 @@ export interface DashboardStats {
 export interface SenderStat {
   senderId: string;
   name: string;
+  courseName: string | null;
   count: number;
 }
 
@@ -201,6 +203,7 @@ export interface AnalyticsData {
   roleCounts: Record<string, number>;
   topBranches: ScopeStat[];
   topCourses: ScopeStat[];
+  topSenderCourses: ScopeStat[];
 }
 
 export interface ApiStudent {

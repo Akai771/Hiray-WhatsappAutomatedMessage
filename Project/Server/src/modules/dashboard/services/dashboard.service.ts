@@ -88,6 +88,10 @@ async function countParents(branchId: string | undefined): Promise<number> {
 export interface SenderStat {
   senderId: string;
   name: string;
+  // The sender's own assigned course, if any — separate from the
+  // notification's audience-targeting course (a faculty member's course
+  // scope vs. who they chose to message).
+  courseName: string | null;
   count: number;
 }
 
@@ -124,6 +128,11 @@ export interface AnalyticsData {
   // to attribute them to.
   topBranches: ScopeStat[];
   topCourses: ScopeStat[];
+  // Courses ranked by how much their faculty use the app — attributed to
+  // the SENDER's own course (faculty.course_id), not the audience the
+  // notification was sent to. Answers "which course's faculty are actually
+  // sending notifications, and how often" — distinct from topCourses above.
+  topSenderCourses: ScopeStat[];
 }
 
 // Notification volume here is small enough (a college's own bulk-messaging
@@ -136,7 +145,7 @@ export async function getAnalytics(user: AuthUser): Promise<AnalyticsData> {
   let query = supabaseAdmin
     .from("notifications")
     .select(
-      "id, template_id, created_by, status, faculty:created_by(name, role), notification_templates(name, whatsapp_template_name, category)",
+      "id, template_id, created_by, status, faculty:created_by(name, role, course_id, courses(name)), notification_templates(name, whatsapp_template_name, category)",
     );
   if (branchId) query = query.eq("branch_id", branchId);
 
@@ -150,12 +159,21 @@ export async function getAnalytics(user: AuthUser): Promise<AnalyticsData> {
   const categoryCounts: Record<string, number> = {};
   const statusCounts: Record<string, number> = {};
   const roleCounts: Record<string, number> = {};
+  const senderCourseCounts = new Map<string, ScopeStat>();
 
   for (const row of rows) {
     const senderId = row.created_by as string;
-    const sender = senderCounts.get(senderId) ?? { senderId, name: row.faculty?.name ?? "Unknown", count: 0 };
+    const senderCourseId: string | undefined = row.faculty?.course_id;
+    const senderCourseName: string | null = row.faculty?.courses?.name ?? null;
+    const sender = senderCounts.get(senderId) ?? { senderId, name: row.faculty?.name ?? "Unknown", courseName: senderCourseName, count: 0 };
     sender.count++;
     senderCounts.set(senderId, sender);
+
+    if (senderCourseId) {
+      const stat = senderCourseCounts.get(senderCourseId) ?? { id: senderCourseId, name: senderCourseName ?? "Unknown Course", count: 0 };
+      stat.count++;
+      senderCourseCounts.set(senderCourseId, stat);
+    }
 
     const senderRole = row.faculty?.role ?? "FACULTY";
     roleCounts[senderRole] = (roleCounts[senderRole] ?? 0) + 1;
@@ -206,6 +224,7 @@ export async function getAnalytics(user: AuthUser): Promise<AnalyticsData> {
     roleCounts,
     topBranches,
     topCourses,
+    topSenderCourses: [...senderCourseCounts.values()].sort((a, b) => b.count - a.count).slice(0, 10),
   };
 }
 

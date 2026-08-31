@@ -86,7 +86,7 @@ export function generatePassword(): string {
   return chars.join("");
 }
 function emptyFacultyForm(): FacultyForm {
-  return { name: "", email: "", password: generatePassword(), branchId: "", role: "FACULTY" };
+  return { name: "", email: "", password: generatePassword(), branchId: "", courseId: "", role: "FACULTY" };
 }
 function emptyMsgForm(): MessageForm {
   return {
@@ -158,7 +158,7 @@ interface AppState {
   facultySaving: boolean;
   facultyPage: number;
   facultyPagination: Pagination | null;
-  facultyFilters: { branchId: string; status: string };
+  facultyFilters: { branchId: string; courseId: string; status: string };
   templates: ApiNotificationTemplate[];
   templatesLoading: boolean;
   newTemplate: NewTemplateForm;
@@ -224,7 +224,7 @@ function initialState(role: Role): AppState {
     facultySaving: false,
     facultyPage: 1,
     facultyPagination: null,
-    facultyFilters: { branchId: "all", status: "all" },
+    facultyFilters: { branchId: "all", courseId: "all", status: "all" },
     templates: [],
     templatesLoading: true,
     newTemplate: emptyNewTemplate(),
@@ -859,6 +859,7 @@ function useDashboardState(initialRole: Role) {
     const ff = state.facultyFilters;
     return {
       branchId: ff.branchId === "all" ? undefined : ff.branchId,
+      courseId: ff.courseId === "all" ? undefined : ff.courseId,
       status: ff.status === "all" ? undefined : (ff.status as ApiEntityStatus),
     };
   }, [state.facultyFilters]);
@@ -867,7 +868,7 @@ function useDashboardState(initialRole: Role) {
     setState((s) => ({ ...s, facultyLoading: true }));
     try {
       const q = buildFacultyListQuery();
-      const { data, pagination } = await facultyService.listFaculty(state.facultyPage, PAGE_SIZE, q.branchId, q.status);
+      const { data, pagination } = await facultyService.listFaculty(state.facultyPage, PAGE_SIZE, q.branchId, q.status, q.courseId);
       setState((s) => ({ ...s, faculty: data, facultyPagination: pagination, facultyLoading: false }));
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to load faculty."));
@@ -881,7 +882,14 @@ function useDashboardState(initialRole: Role) {
 
   const setFacultyFilter = useCallback(
     (key: keyof AppState["facultyFilters"], val: string) =>
-      setState((s) => ({ ...s, facultyPage: 1, facultyFilters: { ...s.facultyFilters, [key]: val } })),
+      setState((s) => ({
+        ...s,
+        facultyPage: 1,
+        facultyFilters:
+          key === "branchId"
+            ? { ...s.facultyFilters, branchId: val, courseId: "all" }
+            : { ...s.facultyFilters, [key]: val },
+      })),
     [],
   );
   const setFacultyPage = useCallback((page: number) => setState((s) => ({ ...s, facultyPage: page })), []);
@@ -901,7 +909,14 @@ function useDashboardState(initialRole: Role) {
         ...s,
         showAddFaculty: true,
         editingFacultyId: row.id,
-        facultyForm: { name: row.name, email: row.email, password: "", branchId: row.branchId ?? "", role: row.role },
+        facultyForm: {
+          name: row.name,
+          email: row.email,
+          password: "",
+          branchId: row.branchId ?? "",
+          courseId: row.courseId ?? "",
+          role: row.role,
+        },
       })),
     [],
   );
@@ -949,11 +964,18 @@ function useDashboardState(initialRole: Role) {
         await facultyService.updateFaculty(state.editingFacultyId, {
           name: f.name,
           branchId: f.branchId || undefined,
+          courseId: f.courseId || null,
           role: f.role,
         });
         toast.success("Faculty account updated.");
       } else {
-        await facultyService.createFaculty({ name: f.name, email: f.email, password: f.password, branchId: f.branchId });
+        await facultyService.createFaculty({
+          name: f.name,
+          email: f.email,
+          password: f.password,
+          branchId: f.branchId,
+          courseId: f.courseId || undefined,
+        });
         toast.success("Faculty account created.");
       }
       setState((s) => ({ ...s, showAddFaculty: false, facultySaving: false }));
