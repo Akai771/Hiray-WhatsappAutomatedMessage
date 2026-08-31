@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { ArrowClockwiseIcon, CaretDownIcon, FileIcon, FilePdfIcon, ImageIcon, VideoIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, CaretDownIcon, FileIcon, FilePdfIcon, ImageIcon, VideoIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -599,7 +599,18 @@ export function MessagesPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Delivered / Read / Failed</span>
                       <span className="font-semibold">
-                        {h.delivered} / {h.read} / {h.failed}
+                        {h.delivered} / {h.read} /{" "}
+                        {h.failed > 0 ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 text-destructive underline underline-offset-2"
+                            onClick={() => actions.viewFailedLogs(h.id)}
+                          >
+                            {h.failed} <WarningCircleIcon className="size-3.5" />
+                          </button>
+                        ) : (
+                          h.failed
+                        )}
                       </span>
                     </div>
                   </div>
@@ -653,7 +664,18 @@ export function MessagesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-[12.5px] text-muted-foreground">
-                      {h.delivered} / {h.read} / {h.failed}
+                      {h.delivered} / {h.read} /{" "}
+                      {h.failed > 0 ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-destructive underline underline-offset-2"
+                          onClick={() => actions.viewFailedLogs(h.id)}
+                        >
+                          {h.failed} <WarningCircleIcon className="size-3.5" />
+                        </button>
+                      ) : (
+                        h.failed
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -677,6 +699,31 @@ export function MessagesPage() {
         recipientCount={recipientCount.total}
         audienceLabel={audienceLabelParts.join(", ") || "no audience selected"}
       />
+
+      <Dialog open={!!state.failureDialogNotificationId} onOpenChange={(v) => !v && actions.closeFailedLogs()}>
+        <DialogContent className="max-w-125 rounded-[20px] p-6">
+          <DialogHeader>
+            <DialogTitle className="text-[15px] font-extrabold">Why did these fail?</DialogTitle>
+          </DialogHeader>
+          <div className="flex max-h-100 flex-col gap-3 overflow-y-auto">
+            {state.failureDialogLoading && (
+              <div className="py-6 text-center text-[13px] text-muted-foreground">Loading…</div>
+            )}
+            {!state.failureDialogLoading && state.failureDialogLogs.length === 0 && (
+              <div className="py-6 text-center text-[13px] text-muted-foreground">No failed recipients found.</div>
+            )}
+            {!state.failureDialogLoading &&
+              state.failureDialogLogs.map((log) => (
+                <div key={log.id} className="rounded-xl border bg-muted/30 p-3">
+                  <div className="text-[13px] font-semibold">{log.phone}</div>
+                  <div className="mt-1 text-[12.5px] text-muted-foreground">
+                    {log.errorMessage || "No error detail returned by WhatsApp."}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

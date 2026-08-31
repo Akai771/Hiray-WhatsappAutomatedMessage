@@ -14,6 +14,7 @@ import {
 } from "@/services";
 import type {
   ApiFaculty,
+  ApiNotificationLog,
   ApiNotificationTemplate,
   ApiParent,
   ApiStudent,
@@ -170,6 +171,9 @@ interface AppState {
   historyFilter: string;
   historySearch: string;
   msgForm: MessageForm;
+  failureDialogNotificationId: string | null;
+  failureDialogLoading: boolean;
+  failureDialogLogs: ApiNotificationLog[];
 }
 
 function initialState(role: Role): AppState {
@@ -223,6 +227,9 @@ function initialState(role: Role): AppState {
     historyFilter: "All",
     historySearch: "",
     msgForm: emptyMsgForm(),
+    failureDialogNotificationId: null,
+    failureDialogLoading: false,
+    failureDialogLogs: [],
   };
 }
 
@@ -1105,6 +1112,24 @@ function useDashboardState(initialRole: Role) {
   const setHistoryFilter = useCallback((v: string) => setState((s) => ({ ...s, historyFilter: v })), []);
   const setHistorySearch = useCallback((v: string) => setState((s) => ({ ...s, historySearch: v })), []);
 
+  const viewFailedLogs = useCallback(async (notificationId: string) => {
+    setState((s) => ({ ...s, failureDialogNotificationId: notificationId, failureDialogLoading: true, failureDialogLogs: [] }));
+    try {
+      // 100 covers every realistic recipient list for a single notification;
+      // this is a "why did these fail" debug view, not a paginated report.
+      const { data } = await notificationService.getNotificationLogs(notificationId, 1, 100);
+      const failed = data.filter((l) => l.status === "FAILED");
+      setState((s) => ({ ...s, failureDialogLogs: failed, failureDialogLoading: false }));
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to load failure details."));
+      setState((s) => ({ ...s, failureDialogLoading: false }));
+    }
+  }, []);
+
+  const closeFailedLogs = useCallback(() => {
+    setState((s) => ({ ...s, failureDialogNotificationId: null, failureDialogLoading: false, failureDialogLogs: [] }));
+  }, []);
+
   const actions = useMemo(
     () => ({
       setTab,
@@ -1174,6 +1199,8 @@ function useDashboardState(initialRole: Role) {
       setHistoryFilter,
       setHistorySearch,
       refreshHistory,
+      viewFailedLogs,
+      closeFailedLogs,
     }),
     [
       setTab, setRole, setMsgField, toggleAudience, uploadMsgAttachment, removeMsgAttachment, setScheduleMode, resetMsgForm, openPreview, closePreview,
@@ -1185,6 +1212,7 @@ function useDashboardState(initialRole: Role) {
       closeAddFaculty, setFacultyFormField, regenerateFacultyPassword, saveFaculty, toggleFacultyStatus, resetFacultyPassword, deleteFaculty, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
       setSelectedBranchForCourses, setNewCourseField, addCourse, deleteCourse, updateCourseYears, updateCourseSemesters,
       setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch, refreshHistory,
+      viewFailedLogs, closeFailedLogs,
     ],
   );
 
