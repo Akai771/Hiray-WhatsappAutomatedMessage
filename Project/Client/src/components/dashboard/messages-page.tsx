@@ -18,6 +18,7 @@ import { WhatsappPreview } from "@/components/dashboard/whatsapp-preview";
 import { PaginationBar } from "@/components/dashboard/pagination-bar";
 import { NOTIFICATION_STATUS_LABEL, NOTIF_TYPE_LABEL } from "@/lib/types";
 
+const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const HISTORY_FILTERS = ["All", ...Object.values(NOTIFICATION_STATUS_LABEL)];
 const COLLEGE_NAME = "Hiray Group";
 const COLLEGE_INITIALS = "GC";
@@ -98,6 +99,15 @@ export function MessagesPage() {
   }, [templatesForType]);
 
   const selectedTemplate = useMemo(() => state.templates.find((t) => t.id === f.templateId), [state.templates, f.templateId]);
+
+  // ₹/message rate comes from the template's own category (Utility vs
+  // Marketing), configured in Settings → Pricing — not a field on the
+  // message form itself. Incl. GST, same math as the Analytics spend card.
+  const estimatedCost = useMemo(() => {
+    if (!selectedTemplate || !state.pricing) return 0;
+    const rate = selectedTemplate.category === "MARKETING" ? state.pricing.marketingRate : state.pricing.utilityRate;
+    return recipientCount.total * rate * (1 + state.pricing.gstPercent / 100);
+  }, [selectedTemplate, state.pricing, recipientCount.total]);
 
   // autoFillRecipientName always claims {{1}} specifically — every other
   // placeholder is admin-typed here, in order, shared across the whole batch.
@@ -497,9 +507,18 @@ export function MessagesPage() {
           </div>
 
           <div className="rounded-2xl border bg-card p-5.5">
-            <div className="mb-2 text-[13px] font-bold text-muted-foreground">Estimated Reach</div>
-            <div className="text-[34px] leading-tight font-extrabold text-primary">{recipientCount.total.toLocaleString()}</div>
-            <div className="mb-4 text-xs text-muted-foreground">recipients based on current filters</div>
+            <div className="flex flex-row justify-between">
+              <div>
+                <div className="mb-2 text-[13px] font-bold text-muted-foreground">Estimated Reach</div>
+                <div className="text-[34px] leading-tight font-extrabold text-primary">{recipientCount.total.toLocaleString()}</div>
+                <div className="mb-4 text-xs text-muted-foreground">recipients based on current filters</div>
+              </div>
+              <div>
+                <div className="mb-2 text-[13px] font-bold text-muted-foreground">Estimated Cost</div>
+                <div className="text-[34px] leading-tight font-extrabold text-primary">{inr.format(estimatedCost)}</div>
+                <div className="mb-4 text-xs text-muted-foreground">Rate (Settings → Pricing) × recipients, incl. GST</div>
+              </div>
+            </div>
             <div className="flex flex-col gap-2">
               <div className={cn("flex justify-between text-[12.5px]", f.audience.students ? "text-foreground" : "text-muted-foreground/50")}>
                 <span>Students</span>
