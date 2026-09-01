@@ -19,7 +19,13 @@ export function PromoteDialog() {
     () => (f.branchId ? state.courses.filter((c) => c.branchId === f.branchId) : []),
     [state.courses, f.branchId],
   );
-  const selectedCourse = useMemo(() => state.courses.find((c) => c.id === f.courseId), [state.courses, f.courseId]);
+  // `Course` (lib/types.ts) omits `semesters` — it's a derived, server-only
+  // field the API response actually carries at runtime (ApiCourse), same
+  // gap student-dialog.tsx casts around.
+  const selectedCourse = useMemo(
+    () => state.courses.find((c) => c.id === f.courseId) as (typeof state.courses)[number] & { semesters?: { year: number; semester: number }[] },
+    [state.courses, f.courseId],
+  );
 
   const branchItems = useMemo(() => Object.fromEntries(state.branches.map((b) => [b.id, b.name])), [state.branches]);
   const courseItems = useMemo(() => Object.fromEntries(coursesForBranch.map((c) => [c.id, c.name])), [coursesForBranch]);

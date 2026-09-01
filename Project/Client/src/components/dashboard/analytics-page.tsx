@@ -411,7 +411,7 @@ export function AnalyticsPage() {
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tick={axisTick} axisLine={{ stroke: "var(--border)" }} tickLine={false} />
                     <YAxis tick={axisTick} axisLine={{ stroke: "var(--border)" }} tickLine={false} tickFormatter={(v) => `₹${v}`} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => inr.format(v)} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v) => inr.format(Number(v ?? 0))} />
                     <Legend wrapperStyle={{ fontSize: 11.5, color: "var(--muted-foreground)" }} iconType="circle" iconSize={8} />
                     <Line type="monotone" dataKey="utility" name="Utility" stroke={CATEGORY_COLOR.UTILITY} strokeWidth={2} dot={{ r: 3 }} />
                     <Line type="monotone" dataKey="marketing" name="Marketing" stroke={CATEGORY_COLOR.MARKETING} strokeWidth={2} dot={{ r: 3 }} />
@@ -471,7 +471,7 @@ export function AnalyticsPage() {
             >
               <ResponsiveContainer width="100%" height={220}>
                 <FunnelChart>
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => v.toLocaleString()} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => Number(v ?? 0).toLocaleString()} />
                   <Funnel dataKey="value" data={funnelStages} isAnimationActive={false}>
                     {funnelStages.map((d) => (
                       <Cell key={d.key} fill={d.fill} />
