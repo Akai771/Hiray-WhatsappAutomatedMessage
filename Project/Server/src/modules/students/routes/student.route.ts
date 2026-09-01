@@ -6,6 +6,7 @@ import {
   updateStudentSchema,
   listStudentsQuerySchema,
   bulkDeleteStudentsSchema,
+  promoteStudentsSchema,
 } from "../validators/student.validators";
 import { idParamSchema } from "../../../shared/validators";
 import { authenticate, validate } from "../../../middleware";
@@ -30,3 +31,4 @@ studentRouter.get("/:id", validate({ params: idParamSchema }), studentController
 studentRouter.patch("/:id", validate({ params: idParamSchema, body: updateStudentSchema }), studentController.update);
 studentRouter.delete("/:id", validate({ params: idParamSchema }), studentController.remove);
 studentRouter.post("/bulk-delete", validate({ body: bulkDeleteStudentsSchema }), studentController.bulkRemove);
+studentRouter.post("/promote", validate({ body: promoteStudentsSchema }), studentController.promote);

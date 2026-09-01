@@ -114,6 +114,13 @@ export interface StudentForm {
   status: StudentStatus;
 }
 
+export interface PromoteForm {
+  branchId: string;
+  courseId: string;
+  year: string;
+  semester: string;
+}
+
 export interface ParentForm {
   name: string;
   phone: string;
@@ -133,4 +140,4 @@ export interface FacultyForm {
 }
 
 export type Tab = "messages" | "students" | "parents" | "faculty" | "analytics" | "settings";
-export type SettingsTab = "branches" | "courses" | "years" | "templates";
+export type SettingsTab = "branches" | "courses" | "years" | "templates" | "pricing";

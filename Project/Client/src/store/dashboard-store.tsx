@@ -11,6 +11,7 @@ import {
   notificationService,
   uploadService,
   dashboardService,
+  pricingService,
   ApiClientError,
 } from "@/services";
 import type {
@@ -24,6 +25,7 @@ import type {
   NotificationStatus,
   Pagination,
   ParentRelation,
+  PricingSettings,
   RecipientType,
   StudentStatus as ApiStudentStatus,
   TemplateCategory,
@@ -36,6 +38,7 @@ import type {
   HistoryRow,
   MessageForm,
   ParentForm,
+  PromoteForm,
   Role,
   SettingsTab,
   StudentForm,
@@ -66,6 +69,9 @@ function emptyStudentForm(): StudentForm {
     gender: "",
     status: "ACTIVE",
   };
+}
+function emptyPromoteForm(): PromoteForm {
+  return { branchId: "", courseId: "", year: "", semester: "" };
 }
 function emptyParentForm(): ParentForm {
   return { name: "", phone: "", email: "", relation: "", linkedStudentId: "", status: "ACTIVE" };
@@ -179,6 +185,11 @@ interface AppState {
   editingStudentId: string | null;
   studentForm: StudentForm;
   showImportStudents: boolean;
+  showPromoteStudents: boolean;
+  promoteForm: PromoteForm;
+  promotePreviewCount: number | null;
+  promotePreviewLoading: boolean;
+  promoting: boolean;
   showAddParent: boolean;
   editingParentId: string | null;
   parentForm: ParentForm;
@@ -198,6 +209,9 @@ interface AppState {
   failureDialogLogs: ApiNotificationLog[];
   analytics: AnalyticsData | null;
   analyticsLoading: boolean;
+  pricing: PricingSettings | null;
+  pricingLoading: boolean;
+  pricingSaving: boolean;
 }
 
 function initialState(role: Role): AppState {
@@ -245,6 +259,11 @@ function initialState(role: Role): AppState {
     editingStudentId: null,
     studentForm: emptyStudentForm(),
     showImportStudents: false,
+    showPromoteStudents: false,
+    promoteForm: emptyPromoteForm(),
+    promotePreviewCount: null,
+    promotePreviewLoading: false,
+    promoting: false,
     showAddParent: false,
     editingParentId: null,
     parentForm: emptyParentForm(),
@@ -264,6 +283,9 @@ function initialState(role: Role): AppState {
     failureDialogLogs: [],
     analytics: null,
     analyticsLoading: true,
+    pricing: null,
+    pricingLoading: true,
+    pricingSaving: false,
   };
 }
 
@@ -349,6 +371,33 @@ function useDashboardState(initialRole: Role) {
   useEffect(() => {
     refreshAnalytics();
   }, [refreshAnalytics]);
+
+  const refreshPricing = useCallback(async () => {
+    setState((s) => ({ ...s, pricingLoading: true }));
+    try {
+      const data = await pricingService.getPricing();
+      setState((s) => ({ ...s, pricing: data, pricingLoading: false }));
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to load pricing settings."));
+      setState((s) => ({ ...s, pricingLoading: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPricing();
+  }, [refreshPricing]);
+
+  const savePricing = useCallback(async (input: { utilityRate: number; marketingRate: number; gstPercent: number }) => {
+    setState((s) => ({ ...s, pricingSaving: true }));
+    try {
+      const data = await pricingService.updatePricing(input);
+      setState((s) => ({ ...s, pricing: data, pricingSaving: false }));
+      toast.success("Pricing updated.");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to update pricing."));
+      setState((s) => ({ ...s, pricingSaving: false }));
+    }
+  }, []);
 
   useEffect(() => {
     refreshTemplates();
@@ -614,6 +663,7 @@ function useDashboardState(initialRole: Role) {
           name: f.name,
           phone: f.phone,
           email: f.email || undefined,
+          branchId: f.branchId,
           courseId: f.courseId,
           year: Number(f.year),
           semester: Number(f.semester),
@@ -698,6 +748,87 @@ function useDashboardState(initialRole: Role) {
     },
     [refreshStudents],
   );
+
+  const openPromoteStudents = useCallback(
+    (defaultBranchId?: string) =>
+      setState((s) => ({
+        ...s,
+        showPromoteStudents: true,
+        promoteForm: { ...emptyPromoteForm(), branchId: defaultBranchId ?? "" },
+        promotePreviewCount: null,
+      })),
+    [],
+  );
+  const closePromoteStudents = useCallback(() => setState((s) => ({ ...s, showPromoteStudents: false })), []);
+  const setPromoteFormField = useCallback(
+    <K extends keyof PromoteForm>(key: K, val: PromoteForm[K]) =>
+      setState((s) => {
+        const form = { ...s.promoteForm, [key]: val };
+        // Changing an upstream field invalidates whatever depended on it —
+        // same cascading-reset shape as the student form's own College →
+        // Course → Year → Semester chain.
+        if (key === "branchId") {
+          form.courseId = "";
+          form.year = "";
+          form.semester = "";
+        } else if (key === "courseId") {
+          form.year = "";
+          form.semester = "";
+        } else if (key === "year") {
+          form.semester = "";
+        }
+        return { ...s, promoteForm: form, promotePreviewCount: null };
+      }),
+    [],
+  );
+
+  // Debounced live count of how many ACTIVE students match the chosen
+  // course/year/semester — so the confirm button always shows exactly who's
+  // about to be moved before it happens.
+  const refreshPromotePreview = useCallback(async () => {
+    const f = state.promoteForm;
+    if (!f.courseId || !f.year || !f.semester) return;
+    setState((s) => ({ ...s, promotePreviewLoading: true }));
+    try {
+      const { pagination } = await studentsService.listStudents(1, 1, {
+        courseId: f.courseId,
+        year: Number(f.year),
+        semester: Number(f.semester),
+        status: "ACTIVE",
+      });
+      setState((s) => ({ ...s, promotePreviewCount: pagination.total, promotePreviewLoading: false }));
+    } catch {
+      setState((s) => ({ ...s, promotePreviewLoading: false }));
+    }
+  }, [state.promoteForm]);
+
+  useEffect(() => {
+    if (!state.showPromoteStudents) return;
+    const handle = setTimeout(refreshPromotePreview, 250);
+    return () => clearTimeout(handle);
+  }, [state.showPromoteStudents, state.promoteForm, refreshPromotePreview]);
+
+  const confirmPromote = useCallback(async () => {
+    const f = state.promoteForm;
+    if (!f.courseId || !f.year || !f.semester) {
+      toast.error("Select college, course, year and semester.");
+      return;
+    }
+    setState((s) => ({ ...s, promoting: true }));
+    try {
+      const result = await studentsService.promoteStudents({ courseId: f.courseId, year: Number(f.year), semester: Number(f.semester) });
+      if (result.graduated > 0) {
+        toast.success(`${result.graduated} student(s) marked as graduated — that was the course's final semester.`);
+      } else {
+        toast.success(`${result.promoted} student(s) promoted to Year ${result.newYear}, Semester ${result.newSemester}.`);
+      }
+      setState((s) => ({ ...s, showPromoteStudents: false, promoting: false }));
+      await refreshStudents();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to promote students."));
+      setState((s) => ({ ...s, promoting: false }));
+    }
+  }, [state.promoteForm, refreshStudents]);
 
   const setParentFilter = useCallback(
     (key: keyof AppState["parentFilters"], val: string) =>
@@ -1303,6 +1434,10 @@ function useDashboardState(initialRole: Role) {
       openImportStudents,
       closeImportStudents,
       importStudents,
+      openPromoteStudents,
+      closePromoteStudents,
+      setPromoteFormField,
+      confirmPromote,
       setParentFilter,
       setParentSearch,
       setParentsPage,
@@ -1350,18 +1485,21 @@ function useDashboardState(initialRole: Role) {
       viewFailedLogs,
       closeFailedLogs,
       refreshAnalytics,
+      refreshPricing,
+      savePricing,
     }),
     [
       setTab, setRole, setMsgField, setVariableValue, selectMsgTemplate, toggleAudience, uploadMsgAttachment, removeMsgAttachment, setScheduleMode, resetMsgForm, openPreview, closePreview,
       sendNotification, setStudentFilter, setStudentSearch, setStudentsPage, toggleStudentSelect, toggleSelectAllStudents, openAddStudent,
       openEditStudent, closeAddStudent, setStudentFormField, saveStudent, deleteStudent, bulkDeleteStudents, messageSelectedStudents,
-      openImportStudents, closeImportStudents, importStudents, setParentFilter, setParentSearch, setParentsPage, toggleParentSelect,
+      openImportStudents, closeImportStudents, importStudents, openPromoteStudents, closePromoteStudents, setPromoteFormField, confirmPromote,
+      setParentFilter, setParentSearch, setParentsPage, toggleParentSelect,
       toggleSelectAllParents, openAddParent, openEditParent, closeAddParent, setParentFormField, saveParent, deleteParent,
       bulkDeleteParents, messageSelectedParents, openImportParents, setFacultyFilter, setFacultyPage, openAddFaculty, openEditFaculty,
       closeAddFaculty, setFacultyFormField, regenerateFacultyPassword, saveFaculty, toggleFacultyStatus, resetFacultyPassword, deleteFaculty, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
       setSelectedBranchForCourses, setNewCourseField, addCourse, deleteCourse, updateCourseYears, updateCourseSemesters,
       setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch, setHistoryPage, refreshHistory,
-      viewFailedLogs, closeFailedLogs, refreshAnalytics,
+      viewFailedLogs, closeFailedLogs, refreshAnalytics, refreshPricing, savePricing,
     ],
   );
 

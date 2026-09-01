@@ -86,6 +86,7 @@ export async function update(id: string, input: UpdateStudentInput): Promise<Stu
   if (input.name !== undefined) patch.name = input.name;
   if (input.phone !== undefined) patch.phone = input.phone;
   if (input.email !== undefined) patch.email = input.email;
+  if (input.branchId !== undefined) patch.branch_id = input.branchId;
   if (input.courseId !== undefined) patch.course_id = input.courseId;
   if (input.year !== undefined) patch.year = input.year;
   if (input.semester !== undefined) patch.semester = input.semester;
@@ -110,5 +111,42 @@ export async function remove(id: string): Promise<void> {
 export async function removeMany(ids: string[]): Promise<number> {
   const { data, error } = await supabaseAdmin.from(TABLE).delete().in("id", ids).select("id");
   if (error) throw ApiError.internal("Failed to delete students", error.message);
+  return data?.length ?? 0;
+}
+
+// Bulk-moves an entire cohort (one course × year × semester) to the next
+// semester in one statement — no need to fetch or select individual rows
+// first, which is what makes this scale past what row-by-row selection can.
+export async function promoteCohort(
+  courseId: string,
+  year: number,
+  semester: number,
+  newYear: number,
+  newSemester: number,
+): Promise<number> {
+  const { data, error } = await supabaseAdmin
+    .from(TABLE)
+    .update({ year: newYear, semester: newSemester })
+    .eq("course_id", courseId)
+    .eq("year", year)
+    .eq("semester", semester)
+    .eq("status", "ACTIVE")
+    .select("id");
+  if (error) throw ApiError.internal("Failed to promote students", error.message);
+  return data?.length ?? 0;
+}
+
+// Same cohort scoping, but for a course's final semester — nothing to
+// promote into, so the cohort graduates instead.
+export async function graduateCohort(courseId: string, year: number, semester: number): Promise<number> {
+  const { data, error } = await supabaseAdmin
+    .from(TABLE)
+    .update({ status: "GRADUATED" })
+    .eq("course_id", courseId)
+    .eq("year", year)
+    .eq("semester", semester)
+    .eq("status", "ACTIVE")
+    .select("id");
+  if (error) throw ApiError.internal("Failed to graduate students", error.message);
   return data?.length ?? 0;
 }

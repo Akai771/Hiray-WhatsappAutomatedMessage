@@ -1,4 +1,4 @@
-import { useMemo, type ElementType, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +16,7 @@ import type { SettingsTab } from "@/lib/types";
 import {
   BuildingsIcon,
   CalendarBlankIcon,
+  CurrencyInrIcon,
   CursorClickIcon,
   FileTextIcon,
   GraduationCapIcon,
@@ -35,6 +36,7 @@ const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
   { key: "courses", label: "Courses" },
   { key: "years", label: "Years & Semesters" },
   { key: "templates", label: "Message Templates" },
+  { key: "pricing", label: "Pricing" },
 ];
 
 export function SettingsPage() {
@@ -69,6 +71,7 @@ export function SettingsPage() {
       {state.settingsTab === "courses" && <CoursesTab />}
       {state.settingsTab === "years" && <YearsTab />}
       {state.settingsTab === "templates" && <TemplatesTab />}
+      {state.settingsTab === "pricing" && <PricingTab />}
     </div>
   );
 }
@@ -431,6 +434,90 @@ function YearsTab() {
         </div>
       )}
     </section>
+  );
+}
+
+function PricingTab() {
+  const { state, actions } = useDashboard();
+  const p = state.pricing;
+
+  // Local edit buffer — only committed to the server on "Save Rates", so
+  // typing a new value doesn't affect Analytics spend until it's saved.
+  const [form, setForm] = useState({ utilityRate: "0", marketingRate: "0", gstPercent: "18" });
+  useEffect(() => {
+    if (p) setForm({ utilityRate: String(p.utilityRate), marketingRate: String(p.marketingRate), gstPercent: String(p.gstPercent) });
+  }, [p]);
+
+  function handleSave() {
+    const utilityRate = Number(form.utilityRate);
+    const marketingRate = Number(form.marketingRate);
+    const gstPercent = Number(form.gstPercent);
+    if (!Number.isFinite(utilityRate) || !Number.isFinite(marketingRate) || !Number.isFinite(gstPercent)) return;
+    actions.savePricing({ utilityRate, marketingRate, gstPercent });
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <section className="overflow-hidden rounded-2xl border bg-card">
+        <SectionHeader
+          icon={CurrencyInrIcon}
+          iconTone="bg-primary/10 text-primary"
+          title="Message Pricing"
+          subtitle="₹/message rate (excl. GST) used to estimate WhatsApp spend on the Analytics page."
+        />
+        <div className="flex flex-col gap-4 p-5 sm:p-6">
+          {state.pricingLoading ? (
+            <div className="py-6 text-center text-[13px] text-muted-foreground">Loading pricing…</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+                <div>
+                  <Label className="mb-1.5 text-xs font-semibold text-muted-foreground">Utility Rate (₹/msg)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.utilityRate}
+                    onChange={(e) => setForm((f) => ({ ...f, utilityRate: e.target.value }))}
+                    className="h-9.5 text-[13px]"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 text-xs font-semibold text-muted-foreground">Marketing Rate (₹/msg)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.marketingRate}
+                    onChange={(e) => setForm((f) => ({ ...f, marketingRate: e.target.value }))}
+                    className="h-9.5 text-[13px]"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 text-xs font-semibold text-muted-foreground">GST %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.gstPercent}
+                    onChange={(e) => setForm((f) => ({ ...f, gstPercent: e.target.value }))}
+                    className="h-9.5 text-[13px]"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t pt-5">
+                <div className="text-[11.5px] text-muted-foreground">
+                  {p ? `Last updated ${new Date(p.updatedAt).toLocaleString()}` : ""}
+                </div>
+                <Button onClick={handleSave} disabled={state.pricingSaving} className="h-9.5 gap-1.5 rounded-lg px-5 text-[13px] font-bold">
+                  {state.pricingSaving ? "Saving…" : "Save Rates"}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 

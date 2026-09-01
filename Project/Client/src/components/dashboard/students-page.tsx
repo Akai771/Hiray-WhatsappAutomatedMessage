@@ -15,8 +15,9 @@ import { useDashboard } from "@/store/dashboard-store";
 import { useAuth } from "@/store/auth-store";
 import { StudentDialog } from "@/components/dashboard/student-dialog";
 import { ImportDialog } from "@/components/dashboard/import-dialog";
+import { PromoteDialog } from "@/components/dashboard/promote-dialog";
 import { PaginationBar } from "@/components/dashboard/pagination-bar";
-import { FunnelIcon, PencilIcon, TrashIcon } from "@phosphor-icons/react";
+import { ArrowUpIcon, FunnelIcon, PencilIcon, TrashIcon } from "@phosphor-icons/react";
 
 export function StudentsPage() {
   const { state, actions } = useDashboard();
@@ -132,6 +133,14 @@ export function StudentsPage() {
           <div className="mt-0.5 text-[13px] text-muted-foreground">Manage student records and WhatsApp contact details.</div>
         </div>
         <div className="flex gap-2.5">
+          <Button
+            variant="outline"
+            onClick={() => actions.openPromoteStudents(isSuperAdmin ? undefined : (user?.branchId ?? undefined))}
+            className="h-9.5 gap-1.5 rounded-lg px-4.5 text-[13.5px] font-semibold"
+          >
+            <ArrowUpIcon className="size-3.5" />
+            Promote Class
+          </Button>
           <Button variant="outline" onClick={actions.openImportStudents} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Import Excel
           </Button>
@@ -287,6 +296,7 @@ export function StudentsPage() {
       </div>
 
       <StudentDialog />
+      <PromoteDialog />
       <ImportDialog
         open={state.showImportStudents}
         title="Import Students from Excel"

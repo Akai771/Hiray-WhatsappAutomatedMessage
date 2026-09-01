@@ -8,6 +8,7 @@ export async function getStats(req: Request, res: Response) {
 }
 
 export async function getAnalytics(req: Request, res: Response) {
-  const analytics = await dashboardService.getAnalytics(req.user!);
+  const { branchId } = req.query as { branchId?: string };
+  const analytics = await dashboardService.getAnalytics(req.user!, branchId === "all" ? undefined : branchId);
   return sendSuccess(res, analytics);
 }

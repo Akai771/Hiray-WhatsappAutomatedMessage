@@ -10,3 +10,4 @@ export * as dashboardService from "./dashboard.service";
 export * as uploadService from "./upload.service";
 export * as studentsService from "./students.service";
 export * as parentsService from "./parents.service";
+export * as pricingService from "./pricing.service";

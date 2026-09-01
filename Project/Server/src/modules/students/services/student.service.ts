@@ -5,7 +5,14 @@ import { resolveBranchScope } from "../../../middleware/branchScope";
 import { ApiError } from "../../../shared/errors";
 import type { AuthUser } from "../../../shared/types";
 import type { Course } from "../../courses/types/course.types";
-import type { CreateStudentInput, ImportStudentsResult, ListStudentsFilter, UpdateStudentInput } from "../types/student.types";
+import type {
+  CreateStudentInput,
+  ImportStudentsResult,
+  ListStudentsFilter,
+  PromoteStudentsInput,
+  PromoteStudentsResult,
+  UpdateStudentInput,
+} from "../types/student.types";
 import { buildImportTemplate, parseImportFile } from "../utils/spreadsheet";
 
 export async function createStudent(user: AuthUser, input: CreateStudentInput) {
@@ -37,7 +44,19 @@ export async function getStudent(user: AuthUser, id: string) {
 
 export async function updateStudent(user: AuthUser, id: string, input: UpdateStudentInput) {
   await getScopedStudent(user, id);
-  const student = await studentRepository.update(id, input);
+
+  // A requested branchId still goes through resolveBranchScope — a
+  // SUPER_ADMIN's choice is honored, but Faculty can never move a student
+  // out of (or into) a branch other than their own, no matter what the
+  // client sends.
+  const patch = { ...input };
+  if (input.branchId !== undefined) {
+    const branchId = resolveBranchScope(user, input.branchId);
+    if (!branchId) throw ApiError.badRequest("branchId is required");
+    patch.branchId = branchId;
+  }
+
+  const student = await studentRepository.update(id, patch);
   if (!student) throw ApiError.notFound("Student not found");
   return student;
 }
@@ -45,6 +64,37 @@ export async function updateStudent(user: AuthUser, id: string, input: UpdateStu
 export async function deleteStudent(user: AuthUser, id: string) {
   await getScopedStudent(user, id);
   await studentRepository.remove(id);
+}
+
+// Bulk-promotes an entire cohort (one course × year × semester) to the next
+// semester, or graduates it if that semester was the course's last — instead
+// of requiring every student to be selected and edited one at a time.
+export async function promoteStudents(user: AuthUser, input: PromoteStudentsInput): Promise<PromoteStudentsResult> {
+  const course = await courseRepository.findById(input.courseId);
+  if (!course) throw ApiError.notFound("Course not found");
+  // Faculty can only promote cohorts within their own branch's course.
+  resolveBranchScope(user, course.branchId);
+
+  // `semester` is course-wide absolute (Year 2 Sem 1 of a 2-sem/year course
+  // is semester 3, never reset back to 1) — matches
+  // shared/utils/academicStructure.ts's generateSemesters and what's
+  // actually stored on every student row. `year` is redundant with it but
+  // still validated for consistency, since the client sends both.
+  const totalSemesters = course.totalYears * course.semestersPerYear;
+  const expectedYear = Math.ceil(input.semester / course.semestersPerYear);
+  if (input.semester < 1 || input.semester > totalSemesters || expectedYear !== input.year) {
+    throw ApiError.badRequest(`Invalid year/semester for a course with ${course.totalYears} year(s) × ${course.semestersPerYear} semester(s)`);
+  }
+
+  const nextSemester = input.semester + 1;
+  if (nextSemester > totalSemesters) {
+    const graduated = await studentRepository.graduateCohort(input.courseId, input.year, input.semester);
+    return { promoted: 0, graduated, newYear: null, newSemester: null };
+  }
+
+  const newYear = Math.ceil(nextSemester / course.semestersPerYear);
+  const promoted = await studentRepository.promoteCohort(input.courseId, input.year, input.semester, newYear, nextSemester);
+  return { promoted, graduated: 0, newYear, newSemester: nextSemester };
 }
 
 export async function bulkDeleteStudents(user: AuthUser, ids: string[]) {

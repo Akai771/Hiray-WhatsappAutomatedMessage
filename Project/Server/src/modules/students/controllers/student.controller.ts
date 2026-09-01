@@ -50,6 +50,12 @@ export async function bulkRemove(req: Request, res: Response) {
   return sendSuccess(res, { deleted: count }, "Students deleted");
 }
 
+export async function promote(req: Request, res: Response) {
+  const result = await studentService.promoteStudents(req.user!, req.body);
+  const message = result.graduated > 0 ? `${result.graduated} student(s) graduated` : `${result.promoted} student(s) promoted`;
+  return sendSuccess(res, result, message);
+}
+
 export async function importTemplate(_req: Request, res: Response) {
   const buffer = await studentService.getImportTemplate();
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

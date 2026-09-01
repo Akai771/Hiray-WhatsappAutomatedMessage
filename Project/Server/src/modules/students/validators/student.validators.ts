@@ -20,6 +20,7 @@ export const updateStudentSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   phone: z.string().min(6).max(20).optional(),
   email: z.email().optional(),
+  branchId: z.uuid().optional(),
   courseId: z.uuid().optional(),
   year: z.coerce.number().int().positive().optional(),
   semester: z.coerce.number().int().positive().optional(),
@@ -39,4 +40,10 @@ export const listStudentsQuerySchema = paginationQuerySchema.extend({
 
 export const bulkDeleteStudentsSchema = z.object({
   ids: z.array(z.uuid()).min(1),
+});
+
+export const promoteStudentsSchema = z.object({
+  courseId: z.uuid(),
+  year: z.coerce.number().int().positive(),
+  semester: z.coerce.number().int().positive(),
 });

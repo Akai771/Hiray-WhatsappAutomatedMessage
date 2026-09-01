@@ -35,6 +35,7 @@ export interface UpdateStudentInput {
   name?: string;
   phone?: string;
   email?: string;
+  branchId?: string;
   courseId?: string;
   year?: number;
   semester?: number;
@@ -56,4 +57,17 @@ export interface ImportStudentsResult {
   imported: number;
   failed: number;
   errors: { row: number; message: string }[];
+}
+
+export interface PromoteStudentsInput {
+  courseId: string;
+  year: number;
+  semester: number;
+}
+
+export interface PromoteStudentsResult {
+  promoted: number;
+  graduated: number;
+  newYear: number | null;
+  newSemester: number | null;
 }

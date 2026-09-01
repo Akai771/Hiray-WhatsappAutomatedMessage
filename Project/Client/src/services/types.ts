@@ -204,6 +204,22 @@ export interface AnalyticsData {
   topBranches: ScopeStat[];
   topCourses: ScopeStat[];
   topSenderCourses: ScopeStat[];
+  billableByCategory: Record<string, number>;
+  spendByBranch: BranchSpendStat[];
+}
+
+export interface BranchSpendStat {
+  id: string;
+  name: string;
+  utilityCount: number;
+  marketingCount: number;
+}
+
+export interface PricingSettings {
+  utilityRate: number;
+  marketingRate: number;
+  gstPercent: number;
+  updatedAt: string;
 }
 
 export interface ApiStudent {

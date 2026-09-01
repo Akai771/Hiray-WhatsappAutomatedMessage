@@ -25,6 +25,7 @@ export interface UpdateStudentInput {
   name?: string;
   phone?: string;
   email?: string;
+  branchId?: string;
   courseId?: string;
   year?: number;
   semester?: number;
@@ -72,6 +73,24 @@ export async function deleteStudent(id: string): Promise<void> {
 export async function bulkDeleteStudents(ids: string[]): Promise<number> {
   const { data } = await apiPost<{ deleted: number }>("/students/bulk-delete", { ids });
   return data.deleted;
+}
+
+export interface PromoteStudentsInput {
+  courseId: string;
+  year: number;
+  semester: number;
+}
+
+export interface PromoteStudentsResult {
+  promoted: number;
+  graduated: number;
+  newYear: number | null;
+  newSemester: number | null;
+}
+
+export async function promoteStudents(input: PromoteStudentsInput): Promise<PromoteStudentsResult> {
+  const { data } = await apiPost<PromoteStudentsResult>("/students/promote", input);
+  return data;
 }
 
 export async function importStudents(file: File): Promise<ImportStudentsResult> {

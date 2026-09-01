@@ -108,6 +108,17 @@ export interface ScopeStat {
   count: number;
 }
 
+export interface BranchSpendStat {
+  id: string;
+  name: string;
+  // Billable (SENT/DELIVERED/READ) recipient-message counts, by template
+  // category — this is what WhatsApp/the BSP actually charges for, distinct
+  // from topBranches above which counts only successful (delivered/read)
+  // sends for engagement ranking.
+  utilityCount: number;
+  marketingCount: number;
+}
+
 export interface AnalyticsData {
   totalNotifications: number;
   totalRecipients: number;
@@ -133,14 +144,20 @@ export interface AnalyticsData {
   // notification was sent to. Answers "which course's faculty are actually
   // sending notifications, and how often" — distinct from topCourses above.
   topSenderCourses: ScopeStat[];
+  // Billable (SENT/DELIVERED/READ) recipient-message counts by template
+  // category — what spend is actually computed from client-side against the
+  // configured ₹/message rates. Scoped by the same branchId filter as
+  // everything else above.
+  billableByCategory: Record<string, number>;
+  spendByBranch: BranchSpendStat[];
 }
 
 // Notification volume here is small enough (a college's own bulk-messaging
 // tool, not a mass sender) that fetching the scoped rows and aggregating in
 // JS is simpler and more maintainable than a raw SQL/RPC GROUP BY — same
 // tradeoff getDeliveryReport already makes for per-notification counts.
-export async function getAnalytics(user: AuthUser): Promise<AnalyticsData> {
-  const branchId = resolveBranchScope(user, undefined);
+export async function getAnalytics(user: AuthUser, requestedBranchId?: string): Promise<AnalyticsData> {
+  const branchId = resolveBranchScope(user, requestedBranchId);
 
   let query = supabaseAdmin
     .from("notifications")
@@ -195,6 +212,7 @@ export async function getAnalytics(user: AuthUser): Promise<AnalyticsData> {
   }
 
   const { topBranches, topCourses } = await getTopScopes(branchId);
+  const { byCategory: billableByCategory, byBranch: spendByBranch } = await getBillableCounts(branchId);
 
   // `status` on a log holds only its latest webhook event — WhatsApp fires
   // delivered then read in quick succession, overwriting DELIVERED. Same fix
@@ -225,6 +243,50 @@ export async function getAnalytics(user: AuthUser): Promise<AnalyticsData> {
     topBranches,
     topCourses,
     topSenderCourses: [...senderCourseCounts.values()].sort((a, b) => b.count - a.count).slice(0, 10),
+    billableByCategory,
+    spendByBranch,
+  };
+}
+
+// Counts recipient-level messages WhatsApp actually bills for — SENT,
+// DELIVERED, or READ (a FAILED send is never charged, and PENDING hasn't
+// gone out yet) — grouped by template category overall, and by
+// college × category for the per-college spend breakdown.
+async function getBillableCounts(branchId: string | undefined): Promise<{ byCategory: Record<string, number>; byBranch: BranchSpendStat[] }> {
+  let query = supabaseAdmin
+    .from("notification_logs")
+    .select("notifications!inner(branch_id, branches(name), notification_templates(category))")
+    .in("status", ["SENT", "DELIVERED", "READ"]);
+  if (branchId) query = query.eq("notifications.branch_id", branchId);
+
+  const { data, error } = await query;
+  if (error) throw ApiError.internal("Failed to compute billable message counts", error.message);
+
+  const byCategory: Record<string, number> = {};
+  const branchMap = new Map<string, BranchSpendStat>();
+
+  for (const row of (data ?? []) as any[]) {
+    const n = row.notifications;
+    const category = n?.notification_templates?.category;
+    if (!category) continue;
+    byCategory[category] = (byCategory[category] ?? 0) + 1;
+
+    if (n?.branch_id) {
+      const stat = branchMap.get(n.branch_id) ?? {
+        id: n.branch_id,
+        name: n.branches?.name ?? "Unknown Branch",
+        utilityCount: 0,
+        marketingCount: 0,
+      };
+      if (category === "UTILITY") stat.utilityCount++;
+      else if (category === "MARKETING") stat.marketingCount++;
+      branchMap.set(n.branch_id, stat);
+    }
+  }
+
+  return {
+    byCategory,
+    byBranch: [...branchMap.values()].sort((a, b) => b.utilityCount + b.marketingCount - (a.utilityCount + a.marketingCount)),
   };
 }
 
