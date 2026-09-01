@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ENTITY_STATUS_LABEL, PARENT_RELATION_LABEL, type EntityStatus, type ParentRelation } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
+import { DialogFormHeader, FormSection } from "@/components/dashboard/form-section";
+import { LinkIcon, UsersIcon } from "@phosphor-icons/react";
 
 interface StudentComboItem {
   value: string;
@@ -43,9 +45,15 @@ export function ParentDialog() {
   return (
     <Dialog open={state.showAddParent} onOpenChange={(v) => !v && actions.closeAddParent()}>
       <DialogContent className="max-h-[88vh] max-w-130 overflow-y-auto rounded-2xl p-4 sm:p-6.5">
-        <DialogHeader>
-          <DialogTitle className="text-[17px] font-extrabold">{state.editingParentId ? "Edit Parent" : "Add Parent"}</DialogTitle>
-        </DialogHeader>
+        <DialogFormHeader
+          icon={UsersIcon}
+          editing={!!state.editingParentId}
+          title={state.editingParentId ? "Edit Parent" : "Add Parent"}
+          subtitle={state.editingParentId ? "Update this parent's contact details and linked student." : "Register a parent/guardian and link them to their student."}
+        />
+
+        <div className="flex flex-col gap-4">
+        <FormSection icon={UsersIcon} title="Parent Details" subtitle="Contact info used for WhatsApp delivery.">
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Name *</Label>
@@ -78,6 +86,11 @@ export function ParentDialog() {
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Email</Label>
             <Input value={f.email} onChange={(e) => actions.setParentFormField("email", e.target.value)} className="h-9.5 text-[13.5px]" />
           </div>
+        </div>
+        </FormSection>
+
+        <FormSection icon={LinkIcon} title="Linked Student" subtitle="Every message to this parent is routed via their linked student.">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Filter by College</Label>
             <Select
@@ -145,7 +158,10 @@ export function ParentDialog() {
             </div>
           )}
         </div>
-        <div className="mt-2 flex flex-wrap justify-end gap-2.5">
+        </FormSection>
+        </div>
+
+        <div className="mt-1 flex flex-wrap justify-end gap-2.5 border-t pt-4">
           <Button variant="outline" onClick={actions.closeAddParent} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Cancel
           </Button>

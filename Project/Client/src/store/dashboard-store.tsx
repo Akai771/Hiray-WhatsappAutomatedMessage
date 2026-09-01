@@ -509,7 +509,13 @@ function useDashboardState(initialRole: Role) {
     [],
   );
   const openAddStudent = useCallback(
-    () => setState((s) => ({ ...s, showAddStudent: true, editingStudentId: null, studentForm: emptyStudentForm() })),
+    (defaultBranchId?: string) =>
+      setState((s) => ({
+        ...s,
+        showAddStudent: true,
+        editingStudentId: null,
+        studentForm: { ...emptyStudentForm(), branchId: defaultBranchId ?? "" },
+      })),
     [],
   );
   const openEditStudent = useCallback(

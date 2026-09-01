@@ -1,15 +1,20 @@
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STUDENT_STATUS_LABEL, type StudentStatus } from "@/lib/types";
 import { useDashboard } from "@/store/dashboard-store";
+import { useAuth } from "@/store/auth-store";
+import { DialogFormHeader, FormSection } from "@/components/dashboard/form-section";
+import { GraduationCapIcon, IdentificationCardIcon } from "@phosphor-icons/react";
 
 export function StudentDialog() {
   const { state, actions } = useDashboard();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const f = state.studentForm;
 
   const coursesForBranch = useMemo(
@@ -47,12 +52,16 @@ export function StudentDialog() {
   return (
     <Dialog open={state.showAddStudent} onOpenChange={(v) => !v && actions.closeAddStudent()}>
       <DialogContent className="max-h-[88vh] max-w-140 overflow-y-auto rounded-2xl p-4 sm:p-6.5">
-        <DialogHeader>
-          <DialogTitle className="text-[17px] font-extrabold">{state.editingStudentId ? "Edit Student" : "Add Student"}</DialogTitle>
-        </DialogHeader>
+        <DialogFormHeader
+          icon={IdentificationCardIcon}
+          editing={!!state.editingStudentId}
+          title={state.editingStudentId ? "Edit Student" : "Add Student"}
+          subtitle={state.editingStudentId ? "Update this student's details and academic placement." : "Register a new student and assign their college, course, year and semester."}
+        />
 
-        <div className="mb-1 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Student Details</div>
-        <div className="mb-4 grid grid-cols-1 gap-3.5">
+        <div className="flex flex-col gap-4">
+        <FormSection icon={IdentificationCardIcon} title="Student Details" subtitle="Contact info used for WhatsApp delivery.">
+        <div className="grid grid-cols-1 gap-3.5">
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">Roll No *</Label>
             <Input value={f.rollNo} onChange={(e) => actions.setStudentFormField("rollNo", e.target.value)} className="h-9.5 text-[13.5px]" />
@@ -83,9 +92,10 @@ export function StudentDialog() {
             </Select>
           </div>
         </div>
+        </FormSection>
 
-        <div className="mb-1 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">Academic Placement</div>
-        <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+        <FormSection icon={GraduationCapIcon} title="Academic Placement" subtitle="College, course, year and semester.">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
             <Label className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">College *</Label>
             <Select
@@ -97,6 +107,7 @@ export function StudentDialog() {
                 actions.setStudentFormField("year", "");
                 actions.setStudentFormField("semester", "");
               }}
+              disabled={!isSuperAdmin}
             >
               <SelectTrigger className="h-9.5 w-full text-[13.5px]">
                 <SelectValue placeholder="Select" />
@@ -194,8 +205,10 @@ export function StudentDialog() {
             </div>
           )}
         </div>
+        </FormSection>
+        </div>
 
-        <div className="mt-2 flex flex-wrap justify-end gap-2.5">
+        <div className="mt-1 flex flex-wrap justify-end gap-2.5 border-t pt-4">
           <Button variant="outline" onClick={actions.closeAddStudent} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Cancel
           </Button>

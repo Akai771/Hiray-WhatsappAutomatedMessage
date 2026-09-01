@@ -14,7 +14,7 @@ const TABS: { key: Tab; label: string; superAdminOnly?: boolean }[] = [
   { key: "students", label: "Students" },
   { key: "parents", label: "Parents" },
   { key: "faculty", label: "Faculty", superAdminOnly: true },
-  { key: "analytics", label: "Analytics" },
+  { key: "analytics", label: "Analytics", superAdminOnly: true },
   { key: "settings", label: "Settings", superAdminOnly: true },
 ];
 

@@ -43,12 +43,6 @@ export function StudentsPage() {
   // `items` maps are what let Select's SelectValue resolve the selected
   // value to its display label — without it, the trigger just prints the
   // raw value (an id, or a bare number) instead of the item's rendered text.
-  const branchFilterItems = useMemo(() => {
-    const m: Record<string, string> = { all: "All Colleges" };
-    state.branches.forEach((b) => (m[b.id] = b.name));
-    return m;
-  }, [state.branches]);
-
   const courseFilterItems = useMemo(() => {
     const m: Record<string, string> = { all: "All Courses" };
     coursesForFilter.forEach((c) => (m[c.id] = c.code));
@@ -74,21 +68,6 @@ export function StudentsPage() {
   function renderFilterFields(triggerWidthClass: string) {
     return (
       <>
-        {isSuperAdmin && (
-          <Select value={state.studentFilters.branchId} items={branchFilterItems} onValueChange={(v) => actions.setStudentFilter("branchId", v ?? "all")}>
-            <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Colleges</SelectItem>
-              {state.branches.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
         <Select value={state.studentFilters.courseId} items={courseFilterItems} onValueChange={(v) => actions.setStudentFilter("courseId", v ?? "all")}>
           <SelectTrigger className={cn("h-8.5 text-[12.5px]", triggerWidthClass)}>
             <SelectValue />
@@ -156,11 +135,44 @@ export function StudentsPage() {
           <Button variant="outline" onClick={actions.openImportStudents} className="h-9.5 rounded-lg px-4.5 text-[13.5px] font-semibold">
             Import Excel
           </Button>
-          <Button onClick={actions.openAddStudent} className="h-9.5 rounded-lg px-5 text-[13.5px] font-bold">
+          <Button
+            onClick={() => actions.openAddStudent(isSuperAdmin ? undefined : (user?.branchId ?? undefined))}
+            className="h-9.5 rounded-lg px-5 text-[13.5px] font-bold"
+          >
             + Add Student
           </Button>
         </div>
       </div>
+
+      {isSuperAdmin && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-4 mb-3">
+          <span className="mr-1 text-[12px] font-semibold text-muted-foreground">College:</span>
+          <button
+            onClick={() => actions.setStudentFilter("branchId", "all")}
+            className={cn(
+              "cursor-pointer rounded-full border px-3.5 py-2 text-[12.5px] font-bold transition-colors",
+              state.studentFilters.branchId === "all" ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/60",
+            )}
+          >
+            All Colleges
+          </button>
+          {state.branches.map((b) => {
+            const active = state.studentFilters.branchId === b.id;
+            return (
+              <button
+                key={b.id}
+                onClick={() => actions.setStudentFilter("branchId", b.id)}
+                className={cn(
+                  "cursor-pointer rounded-full border px-3.5 py-2 text-[12.5px] font-bold transition-colors",
+                  active ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/60",
+                )}
+              >
+                {b.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2.5 rounded-t-2xl border border-b-0 bg-card p-4">
         <Input
@@ -176,7 +188,7 @@ export function StudentsPage() {
             <FunnelIcon className="size-3.5" />
             Filters
           </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+          <SheetContent side="bottom" className="themed-scroll max-h-[85vh] overflow-y-auto">
             <SheetHeader>
               <SheetTitle>Filter Students</SheetTitle>
             </SheetHeader>
