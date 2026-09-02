@@ -5,6 +5,7 @@ export interface CreateTemplateInput {
   name: string;
   whatsappTemplateName: string;
   category: TemplateCategory;
+  languageCode: string;
   variables: string[];
   bodyText: string;
   autoFillRecipientName: boolean;

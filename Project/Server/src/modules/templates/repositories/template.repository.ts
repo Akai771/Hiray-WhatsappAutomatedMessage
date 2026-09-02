@@ -11,6 +11,7 @@ function mapRow(row: any): NotificationTemplate {
     name: row.name,
     whatsappTemplateName: row.whatsapp_template_name,
     category: row.category,
+    languageCode: row.language_code ?? "en_US",
     variables: row.variables ?? [],
     bodyText: row.body_text ?? "",
     autoFillRecipientName: row.auto_fill_recipient_name ?? false,
@@ -30,6 +31,7 @@ export async function create(input: CreateTemplateInput): Promise<NotificationTe
       name: input.name,
       whatsapp_template_name: input.whatsappTemplateName,
       category: input.category,
+      language_code: input.languageCode,
       variables: input.variables,
       body_text: input.bodyText,
       auto_fill_recipient_name: input.autoFillRecipientName,
@@ -78,6 +80,7 @@ export async function update(id: string, input: UpdateTemplateInput): Promise<No
   if (input.name !== undefined) patch.name = input.name;
   if (input.whatsappTemplateName !== undefined) patch.whatsapp_template_name = input.whatsappTemplateName;
   if (input.category !== undefined) patch.category = input.category;
+  if (input.languageCode !== undefined) patch.language_code = input.languageCode;
   if (input.variables !== undefined) patch.variables = input.variables;
   if (input.bodyText !== undefined) patch.body_text = input.bodyText;
   if (input.autoFillRecipientName !== undefined) patch.auto_fill_recipient_name = input.autoFillRecipientName;

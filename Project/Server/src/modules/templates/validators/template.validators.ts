@@ -16,6 +16,10 @@ export const createTemplateSchema = z
     name: z.string().min(1).max(200),
     whatsappTemplateName: z.string().min(1).max(200),
     category: z.enum([TEMPLATE_CATEGORY.UTILITY, TEMPLATE_CATEGORY.MARKETING]),
+    // Must match the locale this template was actually APPROVED under in
+    // WhatsApp Manager (e.g. "en_US", "en") — a mismatch here makes every
+    // send to this template fail at the Graph API, name notwithstanding.
+    languageCode: z.string().min(2).max(10).default("en_US"),
     // One label per {{n}} placeholder, in order — e.g. ["Recipient Name",
     // "Exam Name", "Start Date", "End Date"] for a 4-variable template.
     variables: z.array(z.string().min(1)).default([]),
@@ -54,6 +58,7 @@ export const updateTemplateSchema = z
     name: z.string().min(1).max(200).optional(),
     whatsappTemplateName: z.string().min(1).max(200).optional(),
     category: z.enum([TEMPLATE_CATEGORY.UTILITY, TEMPLATE_CATEGORY.MARKETING]).optional(),
+    languageCode: z.string().min(2).max(10).optional(),
     variables: z.array(z.string().min(1)).optional(),
     bodyText: z.string().min(1).max(1024).optional(),
     autoFillRecipientName: z.boolean().optional(),

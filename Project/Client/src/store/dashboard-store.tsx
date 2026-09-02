@@ -118,6 +118,7 @@ interface NewTemplateForm {
   name: string;
   whatsappTemplateName: string;
   category: TemplateCategory;
+  languageCode: string;
   variablesText: string;
   bodyText: string;
   autoFillRecipientName: boolean;
@@ -131,6 +132,7 @@ function emptyNewTemplate(): NewTemplateForm {
     name: "",
     whatsappTemplateName: "",
     category: "UTILITY",
+    languageCode: "en_US",
     variablesText: "",
     bodyText: "",
     autoFillRecipientName: false,
@@ -1318,6 +1320,7 @@ function useDashboardState(initialRole: Role) {
       name: t.name,
       whatsappTemplateName: t.whatsappTemplateName,
       category: t.category,
+      languageCode: t.languageCode.trim() || "en_US",
       variables,
       bodyText: t.bodyText,
       autoFillRecipientName: t.autoFillRecipientName,
@@ -1353,6 +1356,7 @@ function useDashboardState(initialRole: Role) {
         name: t.name,
         whatsappTemplateName: t.whatsappTemplateName,
         category: t.category,
+        languageCode: t.languageCode,
         variablesText: t.variables.join(", "),
         bodyText: t.bodyText,
         autoFillRecipientName: t.autoFillRecipientName,

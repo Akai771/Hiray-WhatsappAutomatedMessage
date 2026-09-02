@@ -5,6 +5,11 @@ export interface NotificationTemplate {
   name: string;
   whatsappTemplateName: string;
   category: TemplateCategory;
+  // Locale the template was actually APPROVED under in WhatsApp Manager
+  // (e.g. "en_US", "en") — must match exactly, or the Graph API rejects the
+  // send even though the template name is correct. Defaults to "en_US" but
+  // is not always right; check Manager per template.
+  languageCode: string;
   variables: string[];
   // Approved template's body copy, placeholders included (e.g. "Hello {{1}},
   // ..."). Display-only — mirrors what's in WhatsApp Manager so the send UI
@@ -33,6 +38,7 @@ export interface CreateTemplateInput {
   name: string;
   whatsappTemplateName: string;
   category: TemplateCategory;
+  languageCode: string;
   variables: string[];
   bodyText: string;
   autoFillRecipientName: boolean;
@@ -46,6 +52,7 @@ export interface UpdateTemplateInput {
   name?: string;
   whatsappTemplateName?: string;
   category?: TemplateCategory;
+  languageCode?: string;
   variables?: string[];
   bodyText?: string;
   autoFillRecipientName?: boolean;

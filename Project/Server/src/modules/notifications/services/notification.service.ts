@@ -106,6 +106,7 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
           notificationId: notification.id,
           phone: log.phone,
           whatsappTemplateName: template.whatsappTemplateName,
+          languageCode: template.languageCode,
           bodyVariables,
           attachmentUrl: input.attachmentUrl,
           attachmentType: input.attachmentType,

@@ -5,6 +5,7 @@ export interface SendNotificationJobData {
   notificationId: string;
   phone: string;
   whatsappTemplateName: string;
+  languageCode: string;
   bodyVariables: string[];
   attachmentUrl?: string;
   attachmentType?: string;

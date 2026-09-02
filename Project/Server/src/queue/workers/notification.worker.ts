@@ -62,6 +62,7 @@ async function processSendNotificationJob(job: Job<SendNotificationJobData>): Pr
     const { whatsappMessageId } = await sendTemplateMessage({
       to: data.phone,
       templateName: data.whatsappTemplateName,
+      languageCode: data.languageCode,
       components: buildComponents(data),
     });
 

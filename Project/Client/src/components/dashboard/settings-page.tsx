@@ -39,6 +39,15 @@ const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
   { key: "pricing", label: "Pricing" },
 ];
 
+// Known-good locale codes seen in WhatsApp Manager. "en_US" is the safe
+// default — most templates get approved under it — but a template approved
+// under plain "en" (or another locale) must match exactly or every send to
+// it fails at the Graph API.
+const TEMPLATE_LANGUAGE_LABEL: Record<string, string> = {
+  en_US: "English (US) — en_US",
+  en: "English — en",
+};
+
 export function SettingsPage() {
   const { state, actions } = useDashboard();
 
@@ -625,6 +634,34 @@ function TemplatesTab() {
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(NOTIF_TYPE_LABEL).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="mb-1.5 text-xs font-semibold text-muted-foreground">
+                    Language Code (must match the approved locale in WhatsApp Manager)
+                  </Label>
+                  <Select
+                    value={state.newTemplate.languageCode || "en_US"}
+                    items={TEMPLATE_LANGUAGE_LABEL}
+                    onValueChange={(v) => actions.setNewTemplateField("languageCode", v ?? "en_US")}
+                  >
+                    <SelectTrigger className="h-9.5 w-full text-[13px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Falls back to whatever's already saved (e.g. an
+                          older or less common locale) so an existing
+                          template never silently shows the wrong value. */}
+                      {Object.entries(
+                        state.newTemplate.languageCode && !TEMPLATE_LANGUAGE_LABEL[state.newTemplate.languageCode]
+                          ? { ...TEMPLATE_LANGUAGE_LABEL, [state.newTemplate.languageCode]: state.newTemplate.languageCode }
+                          : TEMPLATE_LANGUAGE_LABEL,
+                      ).map(([value, label]) => (
                         <SelectItem key={value} value={value}>
                           {label}
                         </SelectItem>
