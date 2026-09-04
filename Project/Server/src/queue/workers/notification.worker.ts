@@ -1,8 +1,13 @@
-import { Worker, type Job } from "bullmq";
+import { Worker, DelayedError, type Job } from "bullmq";
 import { redisConnection } from "../../config/redis";
 import { NOTIFICATION_QUEUE } from "../queue";
 import type { SendNotificationJobData } from "../jobs/sendNotification.job";
-import { sendTemplateMessage, type WhatsAppTemplateComponent } from "../../integrations/whatsapp";
+import {
+  sendTemplateMessage,
+  reserveSendSlot,
+  releaseSendSlot,
+  type WhatsAppTemplateComponent,
+} from "../../integrations/whatsapp";
 import { categoryForMime } from "../../integrations/storage";
 import * as notificationRepository from "../../modules/notifications/repositories/notification.repository";
 import * as notificationLogRepository from "../../modules/notifications/repositories/notificationLog.repository";
@@ -55,8 +60,29 @@ async function settleNotificationIfDone(notificationId: string): Promise<void> {
   }
 }
 
-async function processSendNotificationJob(job: Job<SendNotificationJobData>): Promise<void> {
+async function processSendNotificationJob(job: Job<SendNotificationJobData>, token?: string): Promise<void> {
   const { data } = job;
+
+  // Reserve a slot against Meta's rolling-24h send cap before attempting
+  // anything. If the day's quota (WHATSAPP_DAILY_LIMIT) is already spent,
+  // park this job until a slot ages out instead of sending anyway (Meta
+  // would reject it and risks throttling the number) or burning one of its
+  // retry attempts / marking it FAILED for something that isn't a failure.
+  const quota = await reserveSendSlot(data.logId);
+  if (!quota.reserved) {
+    if (!token) {
+      // Only happens if this worker's processor is ever invoked outside
+      // BullMQ's normal lock-holding flow — moveToDelayed requires the lock
+      // token, so there's nothing safe to do but fail loudly.
+      throw new Error("Cannot delay job for quota: missing lock token");
+    }
+    const delayUntil = (quota.retryAt ?? Date.now() + 60_000) + 1_000; // +1s past the window edge
+    logger.info(
+      `Daily WhatsApp send limit reached — delaying log ${data.logId} until ${new Date(delayUntil).toISOString()}`,
+    );
+    await job.moveToDelayed(delayUntil, token);
+    throw new DelayedError();
+  }
 
   try {
     const { whatsappMessageId } = await sendTemplateMessage({
@@ -68,6 +94,11 @@ async function processSendNotificationJob(job: Job<SendNotificationJobData>): Pr
 
     await notificationLogRepository.markSent(data.logId, whatsappMessageId);
   } catch (err) {
+    // The reserved slot only counts once WhatsApp actually accepts the
+    // message — give it back on failure so a bad number/template doesn't
+    // quietly eat into today's limit for nothing.
+    await releaseSendSlot(data.logId).catch(() => undefined);
+
     const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
     if (isLastAttempt) {
       const message = err instanceof Error ? err.message : "Unknown send failure";

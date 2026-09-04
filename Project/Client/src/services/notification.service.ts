@@ -6,6 +6,7 @@ import type {
   NotificationStatus,
   PaginatedEnvelope,
   RecipientType,
+  SendQuota,
 } from "./types";
 
 export interface CreateNotificationInput {
@@ -65,5 +66,35 @@ export async function getDeliveryReport(id: string): Promise<DeliveryReport> {
 
 export async function cancelNotification(id: string): Promise<ApiNotification> {
   const { data } = await apiPost<ApiNotification>(`/notifications/${id}/cancel`);
+  return data;
+}
+
+// How much of Meta's rolling-24h send cap is left right now — used to
+// estimate how long a bulk send will take to fully go out (see
+// estimatedSendSpan in messages-page.tsx).
+export async function getSendQuota(): Promise<SendQuota> {
+  const { data } = await apiGet<SendQuota>("/notifications/quota");
+  return data;
+}
+
+export interface RecipientCountQuery {
+  branchId?: string;
+  courseId?: string;
+  year?: number;
+  semester?: number;
+}
+
+export interface RecipientCount {
+  students: number;
+  parents: number;
+}
+
+// Exact server-side count for the Messages page's Recipients preview — runs
+// the same filter createNotification's resolveRecipients uses. Deliberately
+// not derived from the client's Students/Parents tables, which only ever
+// hold one paginated page of those (that's what undercounted before this
+// existed).
+export async function getRecipientCount(query: RecipientCountQuery): Promise<RecipientCount> {
+  const { data } = await apiGet<RecipientCount>("/notifications/recipient-count", { ...query });
   return data;
 }

@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { statusBadgeClass } from "@/lib/badge-styles";
-import { computeRecipientCount } from "@/lib/recipient-count";
 import { useDashboard } from "@/store/dashboard-store";
 import { useAuth } from "@/store/auth-store";
 import { WhatsappPreview } from "@/components/dashboard/whatsapp-preview";
@@ -67,26 +66,21 @@ export function MessagesPage() {
     return m;
   }, []);
 
-  const matchedStudents = useMemo(() => {
-    const yearNum = f.year === "all" ? undefined : Number(f.year);
-    const semesterNum = f.semester === "all" ? undefined : Number(f.semester);
-    return state.students.filter(
-      (st) =>
-        (f.branchId === "all" || st.branchId === f.branchId) &&
-        (f.courseId === "all" || st.courseId === f.courseId) &&
-        (yearNum === undefined || st.year === yearNum) &&
-        (semesterNum === undefined || st.semester === semesterNum),
-    );
-  }, [state.students, f.branchId, f.courseId, f.year, f.semester]);
-  const matchedStudentIds = useMemo(() => new Set(matchedStudents.map((s) => s.id)), [matchedStudents]);
-  const matchedParents = useMemo(
-    () => state.parents.filter((p) => matchedStudentIds.has(p.linkedStudentId)),
-    [state.parents, matchedStudentIds],
-  );
+  // Exact reach for the current College/Course/Year/Semester filters, from
+  // the server (dashboard-store's debounced recipient-count fetch) rather
+  // than filtered out of state.students/state.parents — those only ever
+  // hold one paginated page (20) from the Students/Parents tabs, which is
+  // what previously undercounted anything past the first page.
+  const matchedStudentsCount = state.msgRecipientCount?.students ?? 0;
+  const matchedParentsCount = state.msgRecipientCount?.parents ?? 0;
 
   const recipientCount = useMemo(
-    () => computeRecipientCount({ students: state.students, parents: state.parents }, f),
-    [state.students, state.parents, f],
+    () => ({
+      students: f.audience.students ? matchedStudentsCount : 0,
+      parents: f.audience.parents ? matchedParentsCount : 0,
+      total: (f.audience.students ? matchedStudentsCount : 0) + (f.audience.parents ? matchedParentsCount : 0),
+    }),
+    [matchedStudentsCount, matchedParentsCount, f.audience.students, f.audience.parents],
   );
   const templatesForType = useMemo(
     () => (f.notifType ? state.templates.filter((t) => t.category === f.notifType) : state.templates),
@@ -108,6 +102,20 @@ export function MessagesPage() {
     const rate = selectedTemplate.category === "MARKETING" ? state.pricing.marketingRate : state.pricing.utilityRate;
     return recipientCount.total * rate * (1 + state.pricing.gstPercent / 100);
   }, [selectedTemplate, state.pricing, recipientCount.total]);
+
+  // Meta caps this WhatsApp number to sendQuota.limit sends per rolling 24h
+  // window (see WHATSAPP_DAILY_LIMIT server-side) — a batch bigger than what's
+  // left today spills over and trickles out ~limit/24h until everyone's
+  // reached. "days" here counts today as day 1, so 1 always means "goes out
+  // now" and N>1 means N-1 more 24h windows on top of today's leftover quota.
+  const estimatedSendSpan = useMemo(() => {
+    if (!state.sendQuota || recipientCount.total === 0) return null;
+    const { remaining, limit } = state.sendQuota;
+    if (recipientCount.total <= remaining) return { days: 1, remaining };
+    const overflow = recipientCount.total - remaining;
+    const days = 1 + Math.ceil(overflow / limit);
+    return { days, remaining };
+  }, [state.sendQuota, recipientCount.total]);
 
   // autoFillRecipientName always claims {{1}} specifically — every other
   // placeholder is admin-typed here, in order, shared across the whole batch.
@@ -419,12 +427,12 @@ export function MessagesPage() {
               <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-[9px] border bg-muted/40 px-3.5 py-2.5">
                 <Checkbox checked={f.audience.students} onCheckedChange={() => actions.toggleAudience("students")} />
                 <span className="text-[13.5px] font-semibold">Students</span>
-                <span className="ml-auto text-xs text-muted-foreground">{matchedStudents.length}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{matchedStudentsCount}</span>
               </label>
               <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-[9px] border bg-muted/40 px-3.5 py-2.5">
                 <Checkbox checked={f.audience.parents} onCheckedChange={() => actions.toggleAudience("parents")} />
                 <span className="text-[13.5px] font-semibold">Parents</span>
-                <span className="ml-auto text-xs text-muted-foreground">{matchedParents.length}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{matchedParentsCount}</span>
               </label>
             </div>
           </div>
@@ -507,26 +515,43 @@ export function MessagesPage() {
           </div>
 
           <div className="rounded-2xl border bg-card p-5.5">
-            <div className="flex flex-row justify-between">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-4">
               <div>
                 <div className="mb-2 text-[13px] font-bold text-muted-foreground">Estimated Reach</div>
-                <div className="text-[34px] leading-tight font-extrabold text-primary">{recipientCount.total.toLocaleString()}</div>
-                <div className="mb-4 text-xs text-muted-foreground">recipients based on current filters</div>
+                <div className="text-[28px] leading-tight font-extrabold text-primary">{recipientCount.total.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">recipients based on current filters</div>
               </div>
               <div>
                 <div className="mb-2 text-[13px] font-bold text-muted-foreground">Estimated Cost</div>
-                <div className="text-[34px] leading-tight font-extrabold text-primary">{inr.format(estimatedCost)}</div>
-                <div className="mb-4 text-xs text-muted-foreground">Rate (Settings → Pricing) × recipients, incl. GST</div>
+                <div className="text-[28px] leading-tight font-extrabold text-primary">{inr.format(estimatedCost)}</div>
+                <div className="text-xs text-muted-foreground">Rate (Settings → Pricing) × recipients, incl. GST</div>
+              </div>
+              <div className="col-span-2">
+                <div className="mb-2 text-[13px] font-bold text-muted-foreground">Estimated Time</div>
+                {estimatedSendSpan ? (
+                  <>
+                    <div className="text-[28px] leading-tight font-extrabold text-primary">
+                      {estimatedSendSpan.days === 1 ? "Today" : `~${estimatedSendSpan.days} days`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {estimatedSendSpan.days === 1
+                        ? `fits within today's remaining ${estimatedSendSpan.remaining.toLocaleString()}-message quota`
+                        : `Meta's 24h send limit (${state.sendQuota!.limit}/day) — ${estimatedSendSpan.remaining.toLocaleString()} left today, rest trickles out over following days`}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-muted-foreground">Pick recipients to estimate</div>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <div className={cn("flex justify-between text-[12.5px]", f.audience.students ? "text-foreground" : "text-muted-foreground/50")}>
                 <span>Students</span>
-                <span className="font-bold">{matchedStudents.length}</span>
+                <span className="font-bold">{matchedStudentsCount}</span>
               </div>
               <div className={cn("flex justify-between text-[12.5px]", f.audience.parents ? "text-foreground" : "text-muted-foreground/50")}>
                 <span>Parents</span>
-                <span className="font-bold">{matchedParents.length}</span>
+                <span className="font-bold">{matchedParentsCount}</span>
               </div>
             </div>
             <Button variant="outline" onClick={actions.openPreview} className="mt-4 h-8.5 w-full rounded-lg text-[12.5px] font-semibold">

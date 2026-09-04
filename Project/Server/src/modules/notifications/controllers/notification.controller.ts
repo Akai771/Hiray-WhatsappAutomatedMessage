@@ -7,6 +7,22 @@ export async function create(req: Request, res: Response) {
   return sendSuccess(res, notification, "Notification created", 201);
 }
 
+export async function getQuota(_req: Request, res: Response) {
+  const quota = await notificationService.getSendQuota();
+  return sendSuccess(res, quota);
+}
+
+export async function getRecipientCount(req: Request, res: Response) {
+  const { branchId, courseId, year, semester } = req.query as unknown as {
+    branchId?: string;
+    courseId?: string;
+    year?: number;
+    semester?: number;
+  };
+  const count = await notificationService.getRecipientCount(req.user!, { branchId, courseId, year, semester });
+  return sendSuccess(res, count);
+}
+
 export async function list(req: Request, res: Response) {
   const { page, limit, branchId, status } = req.query as unknown as {
     page: number;

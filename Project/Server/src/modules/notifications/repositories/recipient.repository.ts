@@ -64,6 +64,49 @@ async function resolveParents(filter: RecipientFilter): Promise<Recipient[]> {
   }));
 }
 
+export interface RecipientCountFilter {
+  branchId?: string;
+  courseId?: string;
+  year?: number;
+  semester?: number;
+}
+
+// Same filter shape as resolveStudents/resolveParents above — head:true asks
+// Supabase for just the row count, not the rows, so the Messages page can
+// preview an accurate reach without pulling every matching record over the
+// wire (and without depending on whatever page of the Students/Parents
+// tables happens to be loaded client-side, which is what undercounted
+// before this existed).
+export async function countRecipients(filter: RecipientCountFilter): Promise<{ students: number; parents: number }> {
+  let studentQuery = supabaseAdmin
+    .from("students")
+    .select("id", { count: "exact", head: true })
+    .eq("status", STUDENT_STATUS.ACTIVE);
+  if (filter.branchId) studentQuery = studentQuery.eq("branch_id", filter.branchId);
+  if (filter.courseId) studentQuery = studentQuery.eq("course_id", filter.courseId);
+  if (filter.year) studentQuery = studentQuery.eq("year", filter.year);
+  if (filter.semester) studentQuery = studentQuery.eq("semester", filter.semester);
+
+  let parentQuery = supabaseAdmin
+    .from("parents")
+    .select("id, students!parents_linked_student_id_fkey!inner(branch_id, course_id, year, semester, status)", {
+      count: "exact",
+      head: true,
+    })
+    .eq("status", "ACTIVE")
+    .eq("students.status", STUDENT_STATUS.ACTIVE);
+  if (filter.branchId) parentQuery = parentQuery.eq("students.branch_id", filter.branchId);
+  if (filter.courseId) parentQuery = parentQuery.eq("students.course_id", filter.courseId);
+  if (filter.year) parentQuery = parentQuery.eq("students.year", filter.year);
+  if (filter.semester) parentQuery = parentQuery.eq("students.semester", filter.semester);
+
+  const [studentResult, parentResult] = await Promise.all([studentQuery, parentQuery]);
+  if (studentResult.error) throw ApiError.internal("Failed to count student recipients", studentResult.error.message);
+  if (parentResult.error) throw ApiError.internal("Failed to count parent recipients", parentResult.error.message);
+
+  return { students: studentResult.count ?? 0, parents: parentResult.count ?? 0 };
+}
+
 export async function resolveRecipients(filter: RecipientFilter): Promise<Recipient[]> {
   const results: Recipient[] = [];
 

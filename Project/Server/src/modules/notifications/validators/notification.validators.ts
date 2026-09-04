@@ -21,6 +21,13 @@ export const createNotificationSchema = z.object({
   scheduledAt: z.iso.datetime().optional(),
 });
 
+export const recipientCountQuerySchema = z.object({
+  branchId: z.uuid().optional(),
+  courseId: z.uuid().optional(),
+  year: z.coerce.number().int().positive().optional(),
+  semester: z.coerce.number().int().positive().optional(),
+});
+
 export const listNotificationsQuerySchema = paginationQuerySchema.extend({
   branchId: z.uuid().optional(),
   status: z

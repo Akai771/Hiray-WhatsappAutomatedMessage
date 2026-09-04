@@ -223,6 +223,15 @@ export interface PricingSettings {
   updatedAt: string;
 }
 
+// Meta's rolling-24h WhatsApp send cap (see WHATSAPP_DAILY_LIMIT server-side)
+// and how much of it is already used right now.
+export interface SendQuota {
+  used: number;
+  limit: number;
+  remaining: number;
+  windowMs: number;
+}
+
 export interface ApiStudent {
   id: string;
   rollNo: string;

@@ -27,6 +27,7 @@ import type {
   ParentRelation,
   PricingSettings,
   RecipientType,
+  SendQuota,
   StudentStatus as ApiStudentStatus,
   TemplateCategory,
 } from "@/services";
@@ -214,6 +215,10 @@ interface AppState {
   pricing: PricingSettings | null;
   pricingLoading: boolean;
   pricingSaving: boolean;
+  sendQuota: SendQuota | null;
+  sendQuotaLoading: boolean;
+  msgRecipientCount: { students: number; parents: number } | null;
+  msgRecipientCountLoading: boolean;
 }
 
 function initialState(role: Role): AppState {
@@ -288,6 +293,10 @@ function initialState(role: Role): AppState {
     pricing: null,
     pricingLoading: true,
     pricingSaving: false,
+    sendQuota: null,
+    sendQuotaLoading: true,
+    msgRecipientCount: null,
+    msgRecipientCountLoading: true,
   };
 }
 
@@ -388,6 +397,49 @@ function useDashboardState(initialRole: Role) {
   useEffect(() => {
     refreshPricing();
   }, [refreshPricing]);
+
+  // Backs the "Estimated Time" figure on the Messages page — how much of
+  // Meta's rolling-24h send cap is left right now, matching the numbers
+  // notificationService.reserveSendSlot() actually enforces server-side.
+  const refreshSendQuota = useCallback(async () => {
+    setState((s) => ({ ...s, sendQuotaLoading: true }));
+    try {
+      const data = await notificationService.getSendQuota();
+      setState((s) => ({ ...s, sendQuota: data, sendQuotaLoading: false }));
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to load send quota."));
+      setState((s) => ({ ...s, sendQuotaLoading: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSendQuota();
+  }, [refreshSendQuota]);
+
+  // Exact reach for the Messages page's Recipients/Cost/Time preview,
+  // queried from the server rather than filtered out of state.students /
+  // state.parents — those only ever hold one paginated (PAGE_SIZE = 20)
+  // page from the Students/Parents tabs, so filtering them client-side
+  // silently undercounted anything past the first page.
+  const f = state.msgForm;
+  useEffect(() => {
+    const handle = setTimeout(async () => {
+      setState((s) => ({ ...s, msgRecipientCountLoading: true }));
+      try {
+        const data = await notificationService.getRecipientCount({
+          branchId: f.branchId === "all" ? undefined : f.branchId,
+          courseId: f.courseId === "all" ? undefined : f.courseId,
+          year: f.year === "all" ? undefined : Number(f.year),
+          semester: f.semester === "all" ? undefined : Number(f.semester),
+        });
+        setState((s) => ({ ...s, msgRecipientCount: data, msgRecipientCountLoading: false }));
+      } catch (err) {
+        toast.error(apiErrorMessage(err, "Failed to load recipient count."));
+        setState((s) => ({ ...s, msgRecipientCountLoading: false }));
+      }
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [f.branchId, f.courseId, f.year, f.semester]);
 
   const savePricing = useCallback(async (input: { utilityRate: number; marketingRate: number; gstPercent: number }) => {
     setState((s) => ({ ...s, pricingSaving: true }));
@@ -523,11 +575,12 @@ function useDashboardState(initialRole: Role) {
       toast.success(scheduledAt ? `Notification scheduled for ${f.scheduleDate} ${f.scheduleTime}.` : "Notification queued for sending.");
       setState((s) => ({ ...s, msgForm: emptyMsgForm(), sendingNotification: false }));
       await refreshHistory();
+      await refreshSendQuota();
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to send notification."));
       setState((s) => ({ ...s, sendingNotification: false }));
     }
-  }, [state.msgForm, state.templates, refreshHistory]);
+  }, [state.msgForm, state.templates, refreshHistory, refreshSendQuota]);
 
   const setStudentFilter = useCallback(
     (key: keyof AppState["studentFilters"], val: string) =>
@@ -1491,6 +1544,7 @@ function useDashboardState(initialRole: Role) {
       refreshAnalytics,
       refreshPricing,
       savePricing,
+      refreshSendQuota,
     }),
     [
       setTab, setRole, setMsgField, setVariableValue, selectMsgTemplate, toggleAudience, uploadMsgAttachment, removeMsgAttachment, setScheduleMode, resetMsgForm, openPreview, closePreview,
@@ -1503,7 +1557,7 @@ function useDashboardState(initialRole: Role) {
       closeAddFaculty, setFacultyFormField, regenerateFacultyPassword, saveFaculty, toggleFacultyStatus, resetFacultyPassword, deleteFaculty, setSettingsTab, setNewBranchField, addBranch, deleteBranch,
       setSelectedBranchForCourses, setNewCourseField, addCourse, deleteCourse, updateCourseYears, updateCourseSemesters,
       setNewTemplateField, addTemplate, startEditTemplate, cancelEditTemplate, deleteTemplate, setHistoryFilter, setHistorySearch, setHistoryPage, refreshHistory,
-      viewFailedLogs, closeFailedLogs, refreshAnalytics, refreshPricing, savePricing,
+      viewFailedLogs, closeFailedLogs, refreshAnalytics, refreshPricing, savePricing, refreshSendQuota,
     ],
   );
 

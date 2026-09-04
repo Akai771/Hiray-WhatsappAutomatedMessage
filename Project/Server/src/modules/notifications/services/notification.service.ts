@@ -1,8 +1,9 @@
 import * as notificationRepository from "../repositories/notification.repository";
 import * as notificationLogRepository from "../repositories/notificationLog.repository";
-import { resolveRecipients } from "../repositories/recipient.repository";
+import { resolveRecipients, countRecipients } from "../repositories/recipient.repository";
 import * as templateRepository from "../../templates/repositories/template.repository";
 import { notificationQueue, SEND_NOTIFICATION_JOB } from "../../../queue";
+import { getQuotaUsage } from "../../../integrations/whatsapp";
 import { resolveBranchScope } from "../../../middleware/branchScope";
 import { ApiError } from "../../../shared/errors";
 import { NOTIFICATION_STATUS } from "../../../shared/constants";
@@ -120,6 +121,26 @@ export async function createNotification(user: AuthUser, input: CreateNotificati
   );
 
   return notification;
+}
+
+// Lets the Messages page estimate how long a send will take to fully go out
+// (remaining quota today, then WHATSAPP_DAILY_LIMIT/24h after) before the
+// admin commits to it — same numbers the worker's reserveSendSlot() enforces.
+export async function getSendQuota() {
+  const { used, limit, windowMs } = await getQuotaUsage();
+  return { used, limit, remaining: Math.max(limit - used, 0), windowMs };
+}
+
+// Real, exact reach for the Messages page's recipient/cost/time preview —
+// runs the same students/parents filter createNotification's resolveRecipients
+// uses, just as a count. Not derived from the client's Students/Parents
+// tables, which only ever hold one paginated page of those.
+export async function getRecipientCount(
+  user: AuthUser,
+  query: { branchId?: string; courseId?: string; year?: number; semester?: number },
+) {
+  const branchId = resolveBranchScope(user, query.branchId);
+  return countRecipients({ branchId, courseId: query.courseId, year: query.year, semester: query.semester });
 }
 
 export async function listNotifications(

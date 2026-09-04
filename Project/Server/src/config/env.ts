@@ -23,6 +23,13 @@ const envSchema = z.object({
   WHATSAPP_VERIFY_TOKEN: z.string().min(1).optional(),
   WHATSAPP_APP_SECRET: z.string().min(1).optional(),
 
+  // Meta's rolling-24h send cap for a business number that isn't verified
+  // yet is 250 — default here is set a bit under that (not the full 250) so
+  // there's always headroom left for ad-hoc testing/dev sends without
+  // those eating into the batch actually going out to real recipients.
+  // Raise this once the business is verified and Meta grants a higher tier.
+  WHATSAPP_DAILY_LIMIT: z.coerce.number().int().positive().default(230),
+
   FRONTEND_URL: z.url(),
 });
 
